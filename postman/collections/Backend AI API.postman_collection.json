@@ -1,0 +1,157 @@
+{
+  "info": {
+    "_postman_id": "6e2b7b9a-6b2c-4b3e-9b0e-1a2b3c4d5e6f",
+    "name": "Backend AI API",
+    "description": "Generated from the current apps/api NestJS backend. Global prefix is `/api/v1` (except `health`, which is *supposed* to be excluded but isn't — see the note on the Health Check request). Two domains exist today: `health-check` and `example` (the generic CRUD reference template — real fields are literally `name`/`col1`/`col2`/`col3`).\n\nKnown bug (see CLAUDE.md): both `HealthCheckController` and `ExampleController` use bare `@Controller()` with argument-less `@Get()` handlers, so both resolve to `GET /api/v1`. Because `HealthCheckModule` is imported before `ExampleModule` in `app.module.ts`, the health check handler wins and `ExampleController.getAll` is currently unreachable through the HTTP layer.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "auth": {
+    "type": "bearer",
+    "bearer": [
+      { "key": "token", "value": "{{token}}", "type": "string" }
+    ]
+  },
+  "variable": [
+    { "key": "baseUrl", "value": "http://localhost:4000", "type": "string" },
+    { "key": "token", "value": "", "type": "string" },
+    { "key": "exampleId", "value": "", "type": "string" }
+  ],
+  "item": [
+    {
+      "name": "Health",
+      "item": [
+        {
+          "name": "Health Check (actual route — GET /api/v1)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1"]
+            },
+            "description": "Intended route is GET /health (see main.ts's `exclude: ['health']` and startup log line), but the exclude never matches because HealthCheckController's computed path is '' not 'health'. With the global prefix applied it actually lands on GET /api/v1, same as ExampleController.getAll — this request hits the real, currently-working path."
+          },
+          "response": []
+        },
+        {
+          "name": "Health Check (intended route — GET /health, currently 404s)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/health",
+              "host": ["{{baseUrl}}"],
+              "path": ["health"]
+            },
+            "description": "Kept here so this collection stops 404ing the moment the routing bug in CLAUDE.md's 'Known pre-existing bugs' section is fixed — delete once that lands."
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Example",
+      "description": "Generic CRUD reference domain (`apps/api/src/domains/example`) — copy this structure for new domains.",
+      "item": [
+        {
+          "name": "Get All Examples",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1"]
+            },
+            "description": "Maps to ExampleController.getAll — but see the collection-level note: this path is currently shadowed by the Health Check handler and won't actually reach this controller until the routing collision is fixed."
+          },
+          "response": []
+        },
+        {
+          "name": "Get Example By Id",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/{{exampleId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "{{exampleId}}"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Create Example",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Sample example\",\n  \"col1\": \"value1\",\n  \"col2\": \"value2\",\n  \"col3\": \"value3\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Update Example",
+          "request": {
+            "method": "PUT",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Updated example\",\n  \"isActive\": true\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/{{exampleId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "{{exampleId}}"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Delete Example",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/{{exampleId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "{{exampleId}}"]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Docs",
+      "item": [
+        {
+          "name": "Swagger UI",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/docs",
+              "host": ["{{baseUrl}}"],
+              "path": ["docs"]
+            },
+            "description": "Only mounted when NODE_ENV !== 'production' (see main.ts)."
+          },
+          "response": []
+        }
+      ]
+    }
+  ]
+}
