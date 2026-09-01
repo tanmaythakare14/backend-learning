@@ -1,0 +1,16 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "module": "CommonJS",
+    "esModuleInterop": true
+  },
+  "files": [],
+  "include": ["src/types/**/*.d.ts"],
+  "references": [
+    { "path": "./tsconfig.app.json" },
+    { "path": "./tsconfig.spec.json" }
+  ],
+  "ts-node": {
+    "files": true
+  }
+}

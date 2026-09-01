@@ -1,0 +1,89 @@
+name: CI
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main, develop]
+
+env:
+  NODE_VERSION: '22'
+
+jobs:
+  main:
+    name: Nx Affected — Lint, Test, Build
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    services:
+      postgres:
+        image: postgres:17-alpine
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: myapp_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+
+      - name: Enable Corepack (Yarn)
+        run: corepack enable
+
+      - name: Get Yarn cache path
+        id: yarn-cache-dir
+        run: echo "dir=$(yarn config get cacheFolder)" >> $GITHUB_OUTPUT
+
+      - name: Cache Yarn
+        uses: actions/cache@v4
+        with:
+          path: ${{ steps.yarn-cache-dir.outputs.dir }}
+          key: ${{ runner.os }}-yarn-${{ hashFiles('**/yarn.lock') }}
+          restore-keys: ${{ runner.os }}-yarn-
+
+      - name: Cache Nx
+        uses: actions/cache@v4
+        with:
+          path: .nx/cache
+          key: ${{ runner.os }}-nx-${{ hashFiles('**/yarn.lock') }}-${{ github.sha }}
+          restore-keys: |
+            ${{ runner.os }}-nx-${{ hashFiles('**/yarn.lock') }}-
+            ${{ runner.os }}-nx-
+
+      - name: Install dependencies
+        run: yarn install --frozen-lockfile
+
+      - name: Set Nx base/head SHAs
+        uses: nrwl/nx-set-shas@v4
+
+      - name: Format check
+        run: yarn format:check
+
+      - name: Lint affected
+        run: yarn affected:lint --base=$NX_BASE --head=$NX_HEAD
+
+      - name: Test affected
+        run: yarn affected:test --base=$NX_BASE --head=$NX_HEAD --coverage --ci
+        env:
+          DB_HOST: localhost
+          DB_PORT: 5432
+          DB_DATABASE: myapp_test
+          DB_USERNAME: postgres
+          DB_PASSWORD: postgres
+
+      - name: Build affected
+        run: yarn affected:build --base=$NX_BASE --head=$NX_HEAD
