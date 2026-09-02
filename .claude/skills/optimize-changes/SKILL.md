@@ -25,7 +25,7 @@ with that path. Otherwise ask:
     branch), scope optimizations to the changed hunks, same as Option 1.
   - If the named file has **no** diff at all, naming it directly is
     authorization enough — review and optimize the whole file.
-  Only check that the path exists; don't gate Option 2 on git status.
+    Only check that the path exists; don't gate Option 2 on git status.
 
 Use `AskUserQuestion` for this if it isn't already obvious from the user's
 message.
@@ -47,7 +47,7 @@ Exclude deleted files. If nothing is changed, say so and stop — don't invent
 work.
 
 For Option 2, check whether the requested path appears in this list —
-that only determines whether the file *has* a diff (see Step 3), not
+that only determines whether the file _has_ a diff (see Step 3), not
 whether the request is allowed.
 
 ## Step 3 — Read with context, scope edits appropriately

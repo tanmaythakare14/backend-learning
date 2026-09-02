@@ -6,9 +6,7 @@ export { UnauthorizedException } from './unauthorized.exception';
 export { NotImplementedException } from './not-implemented.exception';
 export { InternalServerErrorException } from './internal-server-error.exception';
 
-export function isHttpException(
-  error: unknown,
-): error is Error & { statusCode: number } {
+export function isHttpException(error: unknown): error is Error & { statusCode: number } {
   return (
     error instanceof Error &&
     'statusCode' in error &&

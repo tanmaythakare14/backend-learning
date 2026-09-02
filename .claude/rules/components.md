@@ -40,7 +40,14 @@ Every form in this project must use this pattern. No exceptions.
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { Form, FormField, FormItem, FormLabel, FormControl, FormMessage } from '@/components/ui/form';
+import {
+  Form,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormControl,
+  FormMessage,
+} from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 
@@ -100,7 +107,14 @@ import {
   flexRender,
   type ColumnDef,
 } from '@tanstack/react-table';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
 import type { PatientListItem } from '../@types';
 
@@ -129,7 +143,9 @@ export function PatientList({ data }: { data: PatientListItem[] }): JSX.Element 
         {table.getHeaderGroups().map((headerGroup) => (
           <TableRow key={headerGroup.id}>
             {headerGroup.headers.map((header) => (
-              <TableHead key={header.id}>{flexRender(header.column.columnDef.header, header.getContext())}</TableHead>
+              <TableHead key={header.id}>
+                {flexRender(header.column.columnDef.header, header.getContext())}
+              </TableHead>
             ))}
           </TableRow>
         ))}
@@ -138,7 +154,9 @@ export function PatientList({ data }: { data: PatientListItem[] }): JSX.Element 
         {table.getRowModel().rows.map((row) => (
           <TableRow key={row.id}>
             {row.getVisibleCells().map((cell) => (
-              <TableCell key={cell.id}>{flexRender(cell.column.columnDef.cell, cell.getContext())}</TableCell>
+              <TableCell key={cell.id}>
+                {flexRender(cell.column.columnDef.cell, cell.getContext())}
+              </TableCell>
             ))}
           </TableRow>
         ))}
@@ -157,7 +175,9 @@ import { LineChart, Line, XAxis, YAxis } from 'recharts';
 // Never import from 'recharts' directly for the container — always use ChartContainer
 export function VitalsChart({ data }: { data: VitalReading[] }): JSX.Element {
   return (
-    <ChartContainer config={{ bloodPressure: { label: 'Blood Pressure', color: 'hsl(var(--chart-1))' } }}>
+    <ChartContainer
+      config={{ bloodPressure: { label: 'Blood Pressure', color: 'hsl(var(--chart-1))' } }}
+    >
       <LineChart data={data}>
         <XAxis dataKey="date" />
         <YAxis />
@@ -188,7 +208,13 @@ import { Badge } from '@/components/ui/badge';
 Use `<Dialog>` for confirmations and focused actions. Use `<Sheet>` for context panels (e.g. patient context in messages view):
 
 ```tsx
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from '@/components/ui/dialog';
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 ```
 

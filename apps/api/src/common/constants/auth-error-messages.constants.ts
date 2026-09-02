@@ -1,7 +1,10 @@
 export const AuthErrorMessages = {
-  BAD_REQUEST: 'Bad Request', UNAUTHORIZED: 'Unauthorized',
-  FORBIDDEN: 'Forbidden', INTERNAL_SERVER_ERROR: 'Internal Server Error',
-  VALIDATION_FAILED: 'Validation failed', INVALID_CREDENTIALS: 'Invalid email or password',
+  BAD_REQUEST: 'Bad Request',
+  UNAUTHORIZED: 'Unauthorized',
+  FORBIDDEN: 'Forbidden',
+  INTERNAL_SERVER_ERROR: 'Internal Server Error',
+  VALIDATION_FAILED: 'Validation failed',
+  INVALID_CREDENTIALS: 'Invalid email or password',
   AUTH_TOKEN_REQUIRED: 'Authorization token is required',
   INVALID_AUTH_HEADER_FORMAT: 'Authorization header must be: Bearer <token>',
   INVALID_TOKEN: 'Invalid or expired token',

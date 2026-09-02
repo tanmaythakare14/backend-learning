@@ -19,24 +19,40 @@ export interface LogEntry {
 }
 
 const PHI_PATTERNS = [
-  /\b\d{3}-\d{2}-\d{4}\b/g,           // SSN
+  /\b\d{3}-\d{2}-\d{4}\b/g, // SSN
   /\b\d{9}\b/g,
-  /\b\d{3}[-.]?\d{3}[-.]?\d{4}\b/g,   // Phone numbers
+  /\b\d{3}[-.]?\d{3}[-.]?\d{4}\b/g, // Phone numbers
   /\(\d{3}\)\s?\d{3}-\d{4}/g,
   /\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}\b/g, // Email
-  /\b\d{4}[-.s]?\d{4}[-.s]?\d{4}[-.s]?\d{4}\b/g,          // Credit card
-  /\bMRN[-:]?\s?\d+\b/gi,             // Medical record numbers
+  /\b\d{4}[-.s]?\d{4}[-.s]?\d{4}[-.s]?\d{4}\b/g, // Credit card
+  /\bMRN[-:]?\s?\d+\b/gi, // Medical record numbers
   /\b\d{1,2}[-/]\d{1,2}[-/]\d{2,4}\b/g, // Dates of birth
   /\b(?:patient|client|user)\s+name:?\s*[A-Z][a-z]+\s+[A-Z][a-z]+\b/gi,
 ];
 
 const CUSTOM_PHI_FIELDS = [
-  'ssn', 'socialSecurityNumber', 'dateOfBirth', 'dob',
-  'phone', 'phoneNumber', 'email', 'emailAddress',
-  'address', 'medicalRecordNumber', 'mrn',
-  'insuranceId', 'policyNumber', 'accountNumber',
-  'creditCard', 'cardNumber',
-  'name', 'patientName', 'clientName', 'firstName', 'lastName', 'fullName',
+  'ssn',
+  'socialSecurityNumber',
+  'dateOfBirth',
+  'dob',
+  'phone',
+  'phoneNumber',
+  'email',
+  'emailAddress',
+  'address',
+  'medicalRecordNumber',
+  'mrn',
+  'insuranceId',
+  'policyNumber',
+  'accountNumber',
+  'creditCard',
+  'cardNumber',
+  'name',
+  'patientName',
+  'clientName',
+  'firstName',
+  'lastName',
+  'fullName',
 ];
 
 function redactPHI(text: string): string {
@@ -70,8 +86,7 @@ class Logger {
 
   constructor() {
     this.environment = import.meta.env.MODE || 'development';
-    this.enabled =
-      this.environment !== 'test' && import.meta.env.VITE_DISABLE_LOGGING !== 'true';
+    this.enabled = this.environment !== 'test' && import.meta.env.VITE_DISABLE_LOGGING !== 'true';
   }
 
   private shouldLog(level: LogLevel): boolean {

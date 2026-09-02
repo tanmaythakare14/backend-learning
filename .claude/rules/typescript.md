@@ -171,7 +171,13 @@ enum ProgramType {
 
 ```ts
 function isPatientDTO(value: unknown): value is PatientDTO {
-  return typeof value === 'object' && value !== null && 'id' in value && 'mrn' in value && 'firstName' in value;
+  return (
+    typeof value === 'object' &&
+    value !== null &&
+    'id' in value &&
+    'mrn' in value &&
+    'firstName' in value
+  );
 }
 ```
 

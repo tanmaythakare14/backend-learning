@@ -3,10 +3,16 @@ import { isHttpException } from '../exceptions';
 import { logger } from '../utils/logger';
 
 const HTTP_STATUS_TEXT: Record<number, string> = {
-  400: 'Bad Request', 401: 'Unauthorized', 403: 'Forbidden',
-  404: 'Not Found', 409: 'Conflict', 422: 'Unprocessable Entity',
-  429: 'Too Many Requests', 500: 'Internal Server Error',
-  501: 'Not Implemented', 503: 'Service Unavailable',
+  400: 'Bad Request',
+  401: 'Unauthorized',
+  403: 'Forbidden',
+  404: 'Not Found',
+  409: 'Conflict',
+  422: 'Unprocessable Entity',
+  429: 'Too Many Requests',
+  500: 'Internal Server Error',
+  501: 'Not Implemented',
+  503: 'Service Unavailable',
 };
 
 /** Global error handler — must have exactly 4 parameters. */
@@ -26,7 +32,9 @@ export const errorHandler = (
 
   // JSON parse errors
   if (err instanceof SyntaxError && 'body' in err) {
-    res.status(400).json({ status: 400, message: 'Invalid JSON in request body', error: 'Bad Request' });
+    res
+      .status(400)
+      .json({ status: 400, message: 'Invalid JSON in request body', error: 'Bad Request' });
     return;
   }
 

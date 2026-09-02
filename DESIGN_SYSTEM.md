@@ -8,8 +8,8 @@
 
 This lives in the `backend-learning` Nx monorepo: `apps/web` (React 19 + Vite) and `apps/api` (NestJS 11). See the root `CLAUDE.md` for the authoritative description of what's real today.
 
-| Branch | Role |
-| --- | --- |
+| Branch | Role                               |
+| ------ | ---------------------------------- |
 | `main` | Only branch that currently exists. |
 
 The original CarMan-style template this doc is adapted from used a three-branch design workflow (frozen visual reference → active design branch → reviewed integration branch). **That workflow has not been adopted here.** If/when a dedicated design workstream starts, decide branch names then — don't assume `Design`/`development`/`design/themes` exist or should be recreated verbatim.
@@ -34,26 +34,26 @@ These rule files are checked into this repo and already govern any frontend code
 
 ## 1. Locked decisions — do not invent around these
 
-| Decision | Value | Notes |
-| --- | --- | --- |
-| Product name | **Backend AI** (repo-level) — **but the Create Account screen ships as "Cognify"** | **Open conflict, not resolved by this edit.** The onboarding screen was built for a user-facing "learning platform" and named "Cognify" at the user's explicit request; "Backend AI" was never confirmed as the consumer-facing brand for that product. Don't propagate either name further until this is settled — ask rather than guessing which one wins. |
-| UI library | **shadcn/ui only** | No MUI/Chakra/Ant/Mantine. Never hand-roll a primitive shadcn already provides. Not yet installed in `apps/web` — see §5. |
-| Dialog primitive | `@base-ui/react/dialog` | Not Radix. See `rules/dialog.md` for the prop differences (`showCloseButton` instead of `hideCloseButton`; no `dismissible`/`onPointerDownOutside`/`onEscapeKeyDown`). |
-| Module structure | `src/modules/<feature>/` | Fixed sub-folders (`@types`, `components`, `service`, `constants`, `utils`, `__tests__`). See `rules/modules.md`. |
-| API layer | All `fetch` calls in `service/api.ts` | Never in a component, hook, or thunk. See `rules/api.md`. |
-| State management | Redux Toolkit for `authSlice`/`uiSlice` only | Server/API data stays out of Redux — component-local state instead. See `rules/state.md`. |
-| Styling | Tailwind utilities + semantic tokens | No inline `style={}`, no arbitrary hex in components. See `rules/styling.md`. |
-| TypeScript | No `any`; explicit return types on exported functions; Zod is the source of truth for form types | See `rules/typescript.md`. Note: current `eslint.config.js` only `warn`s on `no-explicit-any` and has `explicit-function-return-type` turned **off** — the rule is aspirational until ESLint is tightened to match. |
-| Sensitive-data marking | `data-phi` attribute + logger redaction + encrypted persistence | Already partially real: `apps/web/src/utils/{encryption,secureStorage,logger}.ts` exist and `store/index.ts` wires `redux-persist` through `secureStorage`. See §13. Keep this only if Backend AI actually handles PHI or similarly regulated data — drop it otherwise. |
-| Product/brand name capitalization | `[TBD]` | Blocked on the Backend AI vs Cognify conflict above. |
-| Logo mark | `[TBD]` | Not designed. The Cognify screen uses a placeholder — a `lucide-react` `GraduationCap` icon in a rounded indigo-tint square — not a real mark. Don't treat it as final. |
-| Primary color | `#6366F1` | Locked by the Cognify screen (`--color-primary` in `apps/web/src/index.css`). Hover state `#4F46E5` (`--color-primary-hover`). |
-| Canvas / surround color | `#fcfcff` | `--color-canvas`. Cards are pure white (`--color-card: #ffffff`). |
-| Accent color | `#6366F1` | Same value as primary in this screen (`--color-accent`) — there's no distinct secondary accent yet. |
-| Heading font | Inter | Loaded via Google Fonts `<link>` in `apps/web/index.html` (weights 400–800). Used for both headings and body — no separate display face. |
-| Body / UI font | Inter | Same face as headings, mapped to `font-sans` via `--font-sans` in `index.css`. |
-| Type rule (serif/italic policy) | Sans-only, no italic observed | Not written as an explicit rule anywhere yet — just the pattern the one shipped screen follows. Confirm before treating as locked. |
-| Destructive-action color | `#dc2626` | `--color-destructive`, currently only used for form validation error text on the Cognify screen — not yet exercised on a real destructive action (delete/sign-out) anywhere. |
+| Decision                          | Value                                                                                            | Notes                                                                                                                                                                                                                                                                                                                                                        |
+| --------------------------------- | ------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Product name                      | **Backend AI** (repo-level) — **but the Create Account screen ships as "Cognify"**               | **Open conflict, not resolved by this edit.** The onboarding screen was built for a user-facing "learning platform" and named "Cognify" at the user's explicit request; "Backend AI" was never confirmed as the consumer-facing brand for that product. Don't propagate either name further until this is settled — ask rather than guessing which one wins. |
+| UI library                        | **shadcn/ui only**                                                                               | No MUI/Chakra/Ant/Mantine. Never hand-roll a primitive shadcn already provides. Not yet installed in `apps/web` — see §5.                                                                                                                                                                                                                                    |
+| Dialog primitive                  | `@base-ui/react/dialog`                                                                          | Not Radix. See `rules/dialog.md` for the prop differences (`showCloseButton` instead of `hideCloseButton`; no `dismissible`/`onPointerDownOutside`/`onEscapeKeyDown`).                                                                                                                                                                                       |
+| Module structure                  | `src/modules/<feature>/`                                                                         | Fixed sub-folders (`@types`, `components`, `service`, `constants`, `utils`, `__tests__`). See `rules/modules.md`.                                                                                                                                                                                                                                            |
+| API layer                         | All `fetch` calls in `service/api.ts`                                                            | Never in a component, hook, or thunk. See `rules/api.md`.                                                                                                                                                                                                                                                                                                    |
+| State management                  | Redux Toolkit for `authSlice`/`uiSlice` only                                                     | Server/API data stays out of Redux — component-local state instead. See `rules/state.md`.                                                                                                                                                                                                                                                                    |
+| Styling                           | Tailwind utilities + semantic tokens                                                             | No inline `style={}`, no arbitrary hex in components. See `rules/styling.md`.                                                                                                                                                                                                                                                                                |
+| TypeScript                        | No `any`; explicit return types on exported functions; Zod is the source of truth for form types | See `rules/typescript.md`. Note: current `eslint.config.js` only `warn`s on `no-explicit-any` and has `explicit-function-return-type` turned **off** — the rule is aspirational until ESLint is tightened to match.                                                                                                                                          |
+| Sensitive-data marking            | `data-phi` attribute + logger redaction + encrypted persistence                                  | Already partially real: `apps/web/src/utils/{encryption,secureStorage,logger}.ts` exist and `store/index.ts` wires `redux-persist` through `secureStorage`. See §13. Keep this only if Backend AI actually handles PHI or similarly regulated data — drop it otherwise.                                                                                      |
+| Product/brand name capitalization | `[TBD]`                                                                                          | Blocked on the Backend AI vs Cognify conflict above.                                                                                                                                                                                                                                                                                                         |
+| Logo mark                         | `[TBD]`                                                                                          | Not designed. The Cognify screen uses a placeholder — a `lucide-react` `GraduationCap` icon in a rounded indigo-tint square — not a real mark. Don't treat it as final.                                                                                                                                                                                      |
+| Primary color                     | `#6366F1`                                                                                        | Locked by the Cognify screen (`--color-primary` in `apps/web/src/index.css`). Hover state `#4F46E5` (`--color-primary-hover`).                                                                                                                                                                                                                               |
+| Canvas / surround color           | `#fcfcff`                                                                                        | `--color-canvas`. Cards are pure white (`--color-card: #ffffff`).                                                                                                                                                                                                                                                                                            |
+| Accent color                      | `#6366F1`                                                                                        | Same value as primary in this screen (`--color-accent`) — there's no distinct secondary accent yet.                                                                                                                                                                                                                                                          |
+| Heading font                      | Inter                                                                                            | Loaded via Google Fonts `<link>` in `apps/web/index.html` (weights 400–800). Used for both headings and body — no separate display face.                                                                                                                                                                                                                     |
+| Body / UI font                    | Inter                                                                                            | Same face as headings, mapped to `font-sans` via `--font-sans` in `index.css`.                                                                                                                                                                                                                                                                               |
+| Type rule (serif/italic policy)   | Sans-only, no italic observed                                                                    | Not written as an explicit rule anywhere yet — just the pattern the one shipped screen follows. Confirm before treating as locked.                                                                                                                                                                                                                           |
+| Destructive-action color          | `#dc2626`                                                                                        | `--color-destructive`, currently only used for form validation error text on the Cognify screen — not yet exercised on a real destructive action (delete/sign-out) anywhere.                                                                                                                                                                                 |
 
 ---
 
@@ -80,20 +80,20 @@ Nothing here (`AppShell.tsx`, `AppTopBar.tsx`, sidebar collapse behavior, card r
 
 `apps/web/src/index.css` now has a real `@theme` block (Tailwind v4). Values below are live, taken directly from that file — but it only covers what the Cognify screen needed, so several rows other screens will need are still open.
 
-| Token | Hex | Use |
-| --- | --- | --- |
-| `--color-canvas` | `#fcfcff` | Page background |
-| `--color-card` | `#ffffff` | Card surfaces |
-| `--color-primary` / `--color-primary-hover` | `#6366f1` / `#4f46e5` | Primary actions, CTAs |
-| `--color-accent` / `--color-accent-soft` / `--color-accent-foreground` | `#6366f1` / `#eef2ff` / `#4338ca` | Accent emphasis, soft tinted backgrounds (e.g. mobile logo chip) |
-| `--color-foreground` | `#0f172a` | Primary text |
-| `--color-muted-foreground` | `#64748b` | Secondary/placeholder text |
-| `--color-border` / `--color-input` | `#e7e5f3` | Borders, inputs |
-| `--color-destructive` / `--color-destructive-foreground` | `#dc2626` / `#ffffff` | Form validation errors so far — not yet a real destructive-action button |
-| `--color-success` | `#16a34a` | Defined but not yet used anywhere real |
-| `--color-warning` / `--color-danger` (§11 status colors) | `[TBD]` | Still open — don't assume `--color-destructive` doubles as the §11 "danger" status color without deciding that explicitly |
-| Card/input radius | `rounded-xl` (Tailwind's built-in 12px) | No custom `--radius` token was added — Tailwind v4's default `rounded-xl` already equals 12px, so the spec's "12px cards" requirement is met by the stock utility. Buttons use `rounded-full`, not the radius token. |
-| Card glow | `.shadow-glow` / `.shadow-glow-sm` utility classes in `index.css` | Indigo-tinted `box-shadow` at ~12–16% opacity — the "subtle card glow" from the Cognify screen's spec, not (yet) a general convention. |
+| Token                                                                  | Hex                                                               | Use                                                                                                                                                                                                                  |
+| ---------------------------------------------------------------------- | ----------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `--color-canvas`                                                       | `#fcfcff`                                                         | Page background                                                                                                                                                                                                      |
+| `--color-card`                                                         | `#ffffff`                                                         | Card surfaces                                                                                                                                                                                                        |
+| `--color-primary` / `--color-primary-hover`                            | `#6366f1` / `#4f46e5`                                             | Primary actions, CTAs                                                                                                                                                                                                |
+| `--color-accent` / `--color-accent-soft` / `--color-accent-foreground` | `#6366f1` / `#eef2ff` / `#4338ca`                                 | Accent emphasis, soft tinted backgrounds (e.g. mobile logo chip)                                                                                                                                                     |
+| `--color-foreground`                                                   | `#0f172a`                                                         | Primary text                                                                                                                                                                                                         |
+| `--color-muted-foreground`                                             | `#64748b`                                                         | Secondary/placeholder text                                                                                                                                                                                           |
+| `--color-border` / `--color-input`                                     | `#e7e5f3`                                                         | Borders, inputs                                                                                                                                                                                                      |
+| `--color-destructive` / `--color-destructive-foreground`               | `#dc2626` / `#ffffff`                                             | Form validation errors so far — not yet a real destructive-action button                                                                                                                                             |
+| `--color-success`                                                      | `#16a34a`                                                         | Defined but not yet used anywhere real                                                                                                                                                                               |
+| `--color-warning` / `--color-danger` (§11 status colors)               | `[TBD]`                                                           | Still open — don't assume `--color-destructive` doubles as the §11 "danger" status color without deciding that explicitly                                                                                            |
+| Card/input radius                                                      | `rounded-xl` (Tailwind's built-in 12px)                           | No custom `--radius` token was added — Tailwind v4's default `rounded-xl` already equals 12px, so the spec's "12px cards" requirement is met by the stock utility. Buttons use `rounded-full`, not the radius token. |
+| Card glow                                                              | `.shadow-glow` / `.shadow-glow-sm` utility classes in `index.css` | Indigo-tinted `box-shadow` at ~12–16% opacity — the "subtle card glow" from the Cognify screen's spec, not (yet) a general convention.                                                                               |
 
 There is still no shadcn-style semantic remapping (`--background`, `--card`, `--primary`, `--destructive`, `--ring`, etc.) — the tokens above are consumed directly as Tailwind utilities (`bg-primary`, `text-muted-foreground`, ...), not through a shadcn `:root` mapping layer, because shadcn's CLI was never run (see §5).
 
@@ -112,6 +112,7 @@ There is still no shadcn-style semantic remapping (`--background`, `--card`, `--
 **Before building the next screen:** either (a) run the real CLI to regenerate these five and diff against the hand-written versions, accepting the Radix dependency, or (b) explicitly decide the hand-written versions are good enough to keep — but don't silently add a sixth hand-written primitive without revisiting this choice first, since `rules/components.md` still says CLI-only.
 
 Still not installed: `dialog`, `table`, `badge`, `select`, `checkbox`, `calendar`, `textarea`, `tooltip`, `popover`, `dropdown-menu`, `sonner`, `sheet`. Same two caveats as before apply once they are:
+
 - `dialog.tsx` needs the project's custom `showCloseButton?: boolean` prop (default `true`) per `rules/dialog.md` — it wraps `@base-ui/react/dialog`, not Radix.
 - `badge.tsx` will need custom status variants once §11's colors are decided.
 
@@ -131,8 +132,8 @@ Not built yet. `AppShell` (sidebar + top bar + `<main>` slot) and `AppTopBar` wo
 
 ## 8. Modules — `src/modules/onboarding/` is the first one
 
-| Module | Screens / components built |
-| --- | --- |
+| Module       | Screens / components built                                                                                                                             |
+| ------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------ |
 | `onboarding` | `CreateAccountScreen` (Create Account / sign-up), `OnboardingLeftPanel` (shared two-panel branding side), `PasswordStrengthField`, `SocialAuthButtons` |
 
 Structure follows `rules/modules.md`: `@types/index.ts` (component Props), `constants/index.ts` (product name, password rules), `components/<sub-feature>/`. It does **not** yet have `service/`, `utils/`, or `__tests__/` — there's no backend endpoint to call yet (see below) and no pure helpers beyond what's inline, so those folders were skipped rather than stubbed empty; add them when something real needs to go there.
@@ -169,13 +170,13 @@ Not yet established: a section-header convention, tooltip/popover panel pattern,
 
 Convention to keep regardless of brand: status colors (active/success, pending/warning, new/info, inactive/muted, critical/danger) should be **hardcoded in `badge.tsx`** and **not** shift with theme — they're a clinical/operational convention, not a decorative one, once this app has any status semantics that matter operationally.
 
-| Meaning | Variant | Background | Text | Dot |
-| --- | --- | --- | --- | --- |
-| Active / success | `success` | `[TBD]` | `[TBD]` | `[TBD]` |
-| Pending / follow-up | `warning` | `[TBD]` | `[TBD]` | `[TBD]` |
-| New / info | `info` | `[TBD]` | `[TBD]` | `[TBD]` |
-| Inactive / on hold | `muted` | `[TBD]` | `[TBD]` | `[TBD]` |
-| Critical | `danger` | `[TBD]` | `[TBD]` | — |
+| Meaning             | Variant   | Background | Text    | Dot     |
+| ------------------- | --------- | ---------- | ------- | ------- |
+| Active / success    | `success` | `[TBD]`    | `[TBD]` | `[TBD]` |
+| Pending / follow-up | `warning` | `[TBD]`    | `[TBD]` | `[TBD]` |
+| New / info          | `info`    | `[TBD]`    | `[TBD]` | `[TBD]` |
+| Inactive / on hold  | `muted`   | `[TBD]`    | `[TBD]` | `[TBD]` |
+| Critical            | `danger`  | `[TBD]`    | `[TBD]` | —       |
 
 If Backend AI has a safety-critical severity signal (the way CarMan's allergy-severity red was never allowed to be themed), call that out explicitly here once it exists — don't let it get merged into a generic "danger" variant.
 
@@ -193,7 +194,7 @@ This is already partially real, not aspirational — keep it if Backend AI handl
 
 - `data-phi` attribute on every element rendering sensitive identifiers, per `rules/styling.md`.
 - Never `console.log` sensitive fields — use `apps/web/src/utils/logger.ts`, which already redacts PHI-shaped fields, per `rules/api.md`.
-- Never put sensitive data in Redux, not even in a non-persisted slice, per `rules/state.md`. `apps/web/src/store/index.ts` already wires `redux-persist` through `apps/web/src/utils/secureStorage.ts` (AES via `crypto-js`) for whatever *is* persisted.
+- Never put sensitive data in Redux, not even in a non-persisted slice, per `rules/state.md`. `apps/web/src/store/index.ts` already wires `redux-persist` through `apps/web/src/utils/secureStorage.ts` (AES via `crypto-js`) for whatever _is_ persisted.
 - Env access only through `src/config/environment.ts` (per `CLAUDE.md`) — note `VITE_ENCRYPTION_KEY` has an insecure hardcoded fallback that must be overridden outside local dev.
 
 ---

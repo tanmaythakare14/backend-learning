@@ -91,13 +91,16 @@ Every async Redux action must use `createAsyncThunk`. The thunk calls the servic
 
 ```ts
 // Correct — thunk delegates to service layer
-export const loginThunk = createAsyncThunk('auth/login', async (credentials: LoginCredentials, { rejectWithValue }) => {
-  try {
-    return await authApi.login(credentials); // service call
-  } catch (error) {
-    return rejectWithValue(error instanceof Error ? error.message : 'Login failed');
-  }
-});
+export const loginThunk = createAsyncThunk(
+  'auth/login',
+  async (credentials: LoginCredentials, { rejectWithValue }) => {
+    try {
+      return await authApi.login(credentials); // service call
+    } catch (error) {
+      return rejectWithValue(error instanceof Error ? error.message : 'Login failed');
+    }
+  },
+);
 
 // Wrong — fetch in a thunk
 export const loginThunk = createAsyncThunk('auth/login', async (credentials) => {

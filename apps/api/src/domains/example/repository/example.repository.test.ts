@@ -1,6 +1,9 @@
 import { ExampleRepository } from './example.repository';
 import { makeExampleDbRecord } from '../../../../test-utils/factories/example.factory';
-import { makeTypeOrmRepoMock, type TypeOrmRepoMock } from '../../../../test-utils/mocks/typeorm.mock';
+import {
+  makeTypeOrmRepoMock,
+  type TypeOrmRepoMock,
+} from '../../../../test-utils/mocks/typeorm.mock';
 import type { ExampleCreateDto, ExampleUpdateDto } from '../dto/example.dto';
 
 describe('ExampleRepository', () => {
@@ -35,7 +38,9 @@ describe('ExampleRepository', () => {
       mockTypeOrmRepo.findOne.mockResolvedValue(record);
       const result = await repository.findById('uuid-1');
       expect(result).toEqual(record);
-      expect(mockTypeOrmRepo.findOne).toHaveBeenCalledWith({ where: { id: 'uuid-1', isActive: true } });
+      expect(mockTypeOrmRepo.findOne).toHaveBeenCalledWith({
+        where: { id: 'uuid-1', isActive: true },
+      });
     });
 
     it('returns null when not found', async () => {
@@ -63,7 +68,10 @@ describe('ExampleRepository', () => {
       mockTypeOrmRepo.update.mockResolvedValue({ affected: 1 });
       mockTypeOrmRepo.findOne.mockResolvedValue(updated);
       const result = await repository.update('uuid-1', dto);
-      expect(mockTypeOrmRepo.update).toHaveBeenCalledWith('uuid-1', expect.objectContaining({ name: 'Updated' }));
+      expect(mockTypeOrmRepo.update).toHaveBeenCalledWith(
+        'uuid-1',
+        expect.objectContaining({ name: 'Updated' }),
+      );
       expect(result).toEqual(updated);
     });
   });
@@ -72,7 +80,10 @@ describe('ExampleRepository', () => {
     it('soft-deletes by setting isActive=false', async () => {
       mockTypeOrmRepo.update.mockResolvedValue({ affected: 1 });
       const result = await repository.delete('uuid-1');
-      expect(mockTypeOrmRepo.update).toHaveBeenCalledWith('uuid-1', expect.objectContaining({ isActive: false }));
+      expect(mockTypeOrmRepo.update).toHaveBeenCalledWith(
+        'uuid-1',
+        expect.objectContaining({ isActive: false }),
+      );
       expect(result).toBe(true);
     });
 

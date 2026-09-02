@@ -7,9 +7,7 @@
   },
   "auth": {
     "type": "bearer",
-    "bearer": [
-      { "key": "token", "value": "{{token}}", "type": "string" }
-    ]
+    "bearer": [{ "key": "token", "value": "{{token}}", "type": "string" }]
   },
   "variable": [
     { "key": "baseUrl", "value": "http://localhost:4000", "type": "string" },
@@ -27,9 +25,7 @@
           "name": "Register",
           "request": {
             "method": "POST",
-            "header": [
-              { "key": "Content-Type", "value": "application/json" }
-            ],
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
             "body": {
               "mode": "raw",
               "raw": "{\n  \"firstName\": \"Ada\",\n  \"lastName\": \"Lovelace\",\n  \"email\": \"{{registerEmail}}\",\n  \"password\": \"Abcdef1!23\"\n}"
@@ -51,7 +47,11 @@
                   "mode": "raw",
                   "raw": "{\n  \"firstName\": \"Ada\",\n  \"lastName\": \"Lovelace\",\n  \"email\": \"ada@example.com\",\n  \"password\": \"Abcdef1!23\"\n}"
                 },
-                "url": { "raw": "{{baseUrl}}/api/v1/auth/register", "host": ["{{baseUrl}}"], "path": ["api", "v1", "auth", "register"] }
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/auth/register",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["api", "v1", "auth", "register"]
+                }
               },
               "status": "Created",
               "code": 201,
@@ -68,7 +68,11 @@
                   "mode": "raw",
                   "raw": "{\n  \"firstName\": \"Ada\",\n  \"lastName\": \"Lovelace\",\n  \"email\": \"ada@example.com\",\n  \"password\": \"Abcdef1!23\"\n}"
                 },
-                "url": { "raw": "{{baseUrl}}/api/v1/auth/register", "host": ["{{baseUrl}}"], "path": ["api", "v1", "auth", "register"] }
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/auth/register",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["api", "v1", "auth", "register"]
+                }
               },
               "status": "Conflict",
               "code": 409,
@@ -85,7 +89,11 @@
                   "mode": "raw",
                   "raw": "{\n  \"firstName\": \"Ada\",\n  \"lastName\": \"Lovelace\",\n  \"email\": \"ada@example.com\",\n  \"password\": \"weak\"\n}"
                 },
-                "url": { "raw": "{{baseUrl}}/api/v1/auth/register", "host": ["{{baseUrl}}"], "path": ["api", "v1", "auth", "register"] }
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/auth/register",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["api", "v1", "auth", "register"]
+                }
               },
               "status": "Bad Request",
               "code": 400,
@@ -99,9 +107,7 @@
           "name": "Login",
           "request": {
             "method": "POST",
-            "header": [
-              { "key": "Content-Type", "value": "application/json" }
-            ],
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
             "body": {
               "mode": "raw",
               "raw": "{\n  \"email\": \"{{registerEmail}}\",\n  \"password\": \"Abcdef1!23\"\n}"
@@ -119,8 +125,15 @@
               "originalRequest": {
                 "method": "POST",
                 "header": [{ "key": "Content-Type", "value": "application/json" }],
-                "body": { "mode": "raw", "raw": "{\n  \"email\": \"ada@example.com\",\n  \"password\": \"Abcdef1!23\"\n}" },
-                "url": { "raw": "{{baseUrl}}/api/v1/auth/login", "host": ["{{baseUrl}}"], "path": ["api", "v1", "auth", "login"] }
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"email\": \"ada@example.com\",\n  \"password\": \"Abcdef1!23\"\n}"
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/auth/login",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["api", "v1", "auth", "login"]
+                }
               },
               "status": "OK",
               "code": 200,
@@ -133,8 +146,15 @@
               "originalRequest": {
                 "method": "POST",
                 "header": [{ "key": "Content-Type", "value": "application/json" }],
-                "body": { "mode": "raw", "raw": "{\n  \"email\": \"ada@example.com\",\n  \"password\": \"wrong\"\n}" },
-                "url": { "raw": "{{baseUrl}}/api/v1/auth/login", "host": ["{{baseUrl}}"], "path": ["api", "v1", "auth", "login"] }
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"email\": \"ada@example.com\",\n  \"password\": \"wrong\"\n}"
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/auth/login",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["api", "v1", "auth", "login"]
+                }
               },
               "status": "Unauthorized",
               "code": 401,
@@ -148,7 +168,11 @@
                 "method": "POST",
                 "header": [{ "key": "Content-Type", "value": "application/json" }],
                 "body": { "mode": "raw", "raw": "{\n  \"email\": \"ada@example.com\"\n}" },
-                "url": { "raw": "{{baseUrl}}/api/v1/auth/login", "host": ["{{baseUrl}}"], "path": ["api", "v1", "auth", "login"] }
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/auth/login",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["api", "v1", "auth", "login"]
+                }
               },
               "status": "Unauthorized",
               "code": 401,
@@ -168,9 +192,7 @@
           "name": "Create Student",
           "request": {
             "method": "POST",
-            "header": [
-              { "key": "Content-Type", "value": "application/json" }
-            ],
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
             "body": {
               "mode": "raw",
               "raw": "{\n  \"firstName\": \"Marie\",\n  \"lastName\": \"Curie\",\n  \"email\": \"marie.curie@example.com\",\n  \"phone\": \"(555) 555-0100\",\n  \"course\": \"Cybersecurity Fundamentals\"\n}"
@@ -192,7 +214,11 @@
                   "mode": "raw",
                   "raw": "{\n  \"firstName\": \"Marie\",\n  \"lastName\": \"Curie\",\n  \"email\": \"marie.curie@example.com\",\n  \"phone\": \"(555) 555-0100\",\n  \"course\": \"Cybersecurity Fundamentals\"\n}"
                 },
-                "url": { "raw": "{{baseUrl}}/api/v1/students", "host": ["{{baseUrl}}"], "path": ["api", "v1", "students"] }
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/students",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["api", "v1", "students"]
+                }
               },
               "status": "Created",
               "code": 201,
@@ -209,7 +235,11 @@
                   "mode": "raw",
                   "raw": "{\n  \"firstName\": \"Marie\",\n  \"lastName\": \"Curie\",\n  \"email\": \"marie.curie@example.com\",\n  \"phone\": \"(555) 555-0100\",\n  \"course\": \"Cybersecurity Fundamentals\"\n}"
                 },
-                "url": { "raw": "{{baseUrl}}/api/v1/students", "host": ["{{baseUrl}}"], "path": ["api", "v1", "students"] }
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/students",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["api", "v1", "students"]
+                }
               },
               "status": "Conflict",
               "code": 409,
@@ -226,7 +256,11 @@
                   "mode": "raw",
                   "raw": "{\n  \"firstName\": \"Ada\",\n  \"lastName\": \"Lovelace\",\n  \"email\": \"ada2@example.com\",\n  \"course\": \"Web Development\"\n}"
                 },
-                "url": { "raw": "{{baseUrl}}/api/v1/students", "host": ["{{baseUrl}}"], "path": ["api", "v1", "students"] }
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/students",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["api", "v1", "students"]
+                }
               },
               "status": "Bad Request",
               "code": 400,
@@ -243,7 +277,11 @@
                   "mode": "raw",
                   "raw": "{\n  \"firstName\": \"Ada\",\n  \"lastName\": \"Lovelace\",\n  \"email\": \"ada3@example.com\",\n  \"phone\": \"5551234567\",\n  \"course\": \"Underwater Basket Weaving\"\n}"
                 },
-                "url": { "raw": "{{baseUrl}}/api/v1/students", "host": ["{{baseUrl}}"], "path": ["api", "v1", "students"] }
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/students",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["api", "v1", "students"]
+                }
               },
               "status": "Bad Request",
               "code": 400,
@@ -257,9 +295,7 @@
           "name": "Update Student",
           "request": {
             "method": "PUT",
-            "header": [
-              { "key": "Content-Type", "value": "application/json" }
-            ],
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
             "body": {
               "mode": "raw",
               "raw": "{\n  \"email\": \"marie.curie@example.com\",\n  \"phone\": \"5559998888\",\n  \"course\": \"Cloud Computing\"\n}"
@@ -277,8 +313,15 @@
               "originalRequest": {
                 "method": "PUT",
                 "header": [{ "key": "Content-Type", "value": "application/json" }],
-                "body": { "mode": "raw", "raw": "{\n  \"email\": \"edit-test-updated@example.com\",\n  \"phone\": \"5559998888\",\n  \"course\": \"Cloud Computing\"\n}" },
-                "url": { "raw": "{{baseUrl}}/api/v1/students/{{studentId}}", "host": ["{{baseUrl}}"], "path": ["api", "v1", "students", "{{studentId}}"] }
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"email\": \"edit-test-updated@example.com\",\n  \"phone\": \"5559998888\",\n  \"course\": \"Cloud Computing\"\n}"
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/students/{{studentId}}",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["api", "v1", "students", "{{studentId}}"]
+                }
               },
               "status": "OK",
               "code": 200,
@@ -291,8 +334,15 @@
               "originalRequest": {
                 "method": "PUT",
                 "header": [{ "key": "Content-Type", "value": "application/json" }],
-                "body": { "mode": "raw", "raw": "{\n  \"email\": \"nobody@example.com\",\n  \"phone\": \"5551112222\",\n  \"course\": \"Cloud Computing\"\n}" },
-                "url": { "raw": "{{baseUrl}}/api/v1/students/00000000-0000-0000-0000-000000000000", "host": ["{{baseUrl}}"], "path": ["api", "v1", "students", "00000000-0000-0000-0000-000000000000"] }
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"email\": \"nobody@example.com\",\n  \"phone\": \"5551112222\",\n  \"course\": \"Cloud Computing\"\n}"
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/students/00000000-0000-0000-0000-000000000000",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["api", "v1", "students", "00000000-0000-0000-0000-000000000000"]
+                }
               },
               "status": "Not Found",
               "code": 404,
@@ -305,8 +355,15 @@
               "originalRequest": {
                 "method": "PUT",
                 "header": [{ "key": "Content-Type", "value": "application/json" }],
-                "body": { "mode": "raw", "raw": "{\n  \"email\": \"other-student@example.com\",\n  \"phone\": \"5559998888\",\n  \"course\": \"Cloud Computing\"\n}" },
-                "url": { "raw": "{{baseUrl}}/api/v1/students/{{studentId}}", "host": ["{{baseUrl}}"], "path": ["api", "v1", "students", "{{studentId}}"] }
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"email\": \"other-student@example.com\",\n  \"phone\": \"5559998888\",\n  \"course\": \"Cloud Computing\"\n}"
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/students/{{studentId}}",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["api", "v1", "students", "{{studentId}}"]
+                }
               },
               "status": "Conflict",
               "code": 409,
@@ -386,9 +443,7 @@
           "name": "Create Example",
           "request": {
             "method": "POST",
-            "header": [
-              { "key": "Content-Type", "value": "application/json" }
-            ],
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
             "body": {
               "mode": "raw",
               "raw": "{\n  \"name\": \"Sample example\",\n  \"col1\": \"value1\",\n  \"col2\": \"value2\",\n  \"col3\": \"value3\"\n}"
@@ -405,9 +460,7 @@
           "name": "Update Example",
           "request": {
             "method": "PUT",
-            "header": [
-              { "key": "Content-Type", "value": "application/json" }
-            ],
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
             "body": {
               "mode": "raw",
               "raw": "{\n  \"name\": \"Updated example\",\n  \"isActive\": true\n}"
