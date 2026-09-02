@@ -1,6 +1,6 @@
 # Backend AI — Design System & Handoff Spec
 
-> **Status: template, not yet built.** No visual brand has been chosen and no UI beyond the `apps/web` demo/showcase page exists yet. This file defines the *target* architecture and conventions (several already locked in via `.claude/rules/*`) so that whoever builds the first real screen doesn't have to reinvent them. Every `[TBD]` is a real open decision — fill it in and delete the bracket once decided, don't invent a value here.
+> **Status: first real screen shipped.** The Create Account onboarding screen (`apps/web/src/modules/onboarding/`) is the first UI built against this doc, and it locked in real values for several rows below (colors, font, radius) — see §3/§4. Several other rows are still open. Every remaining `[TBD]` is a real open decision — fill it in and delete the bracket once decided, don't invent a value here.
 
 ---
 
@@ -36,7 +36,7 @@ These rule files are checked into this repo and already govern any frontend code
 
 | Decision | Value | Notes |
 | --- | --- | --- |
-| Product name | **Backend AI** | Use exactly this, consistently. |
+| Product name | **Backend AI** (repo-level) — **but the Create Account screen ships as "Cognify"** | **Open conflict, not resolved by this edit.** The onboarding screen was built for a user-facing "learning platform" and named "Cognify" at the user's explicit request; "Backend AI" was never confirmed as the consumer-facing brand for that product. Don't propagate either name further until this is settled — ask rather than guessing which one wins. |
 | UI library | **shadcn/ui only** | No MUI/Chakra/Ant/Mantine. Never hand-roll a primitive shadcn already provides. Not yet installed in `apps/web` — see §5. |
 | Dialog primitive | `@base-ui/react/dialog` | Not Radix. See `rules/dialog.md` for the prop differences (`showCloseButton` instead of `hideCloseButton`; no `dismissible`/`onPointerDownOutside`/`onEscapeKeyDown`). |
 | Module structure | `src/modules/<feature>/` | Fixed sub-folders (`@types`, `components`, `service`, `constants`, `utils`, `__tests__`). See `rules/modules.md`. |
@@ -45,15 +45,15 @@ These rule files are checked into this repo and already govern any frontend code
 | Styling | Tailwind utilities + semantic tokens | No inline `style={}`, no arbitrary hex in components. See `rules/styling.md`. |
 | TypeScript | No `any`; explicit return types on exported functions; Zod is the source of truth for form types | See `rules/typescript.md`. Note: current `eslint.config.js` only `warn`s on `no-explicit-any` and has `explicit-function-return-type` turned **off** — the rule is aspirational until ESLint is tightened to match. |
 | Sensitive-data marking | `data-phi` attribute + logger redaction + encrypted persistence | Already partially real: `apps/web/src/utils/{encryption,secureStorage,logger}.ts` exist and `store/index.ts` wires `redux-persist` through `secureStorage`. See §13. Keep this only if Backend AI actually handles PHI or similarly regulated data — drop it otherwise. |
-| Product/brand name capitalization | `[TBD]` | Confirm exact casing (e.g. "Backend AI" vs "BackendAI") before it appears in a wordmark. |
-| Logo mark | `[TBD]` | Not designed yet. |
-| Primary color | `[TBD]` | |
-| Canvas / surround color | `[TBD]` | |
-| Accent color | `[TBD]` | |
-| Heading font | `[TBD]` | `index.html` currently loads no custom fonts at all. |
-| Body / UI font | `[TBD]` | |
-| Type rule (serif/italic policy) | `[TBD]` | |
-| Destructive-action color | `[TBD]` | Pick one universal red and use it everywhere (sign out, delete, disconnect) once chosen — don't let it vary by screen. |
+| Product/brand name capitalization | `[TBD]` | Blocked on the Backend AI vs Cognify conflict above. |
+| Logo mark | `[TBD]` | Not designed. The Cognify screen uses a placeholder — a `lucide-react` `GraduationCap` icon in a rounded indigo-tint square — not a real mark. Don't treat it as final. |
+| Primary color | `#6366F1` | Locked by the Cognify screen (`--color-primary` in `apps/web/src/index.css`). Hover state `#4F46E5` (`--color-primary-hover`). |
+| Canvas / surround color | `#fcfcff` | `--color-canvas`. Cards are pure white (`--color-card: #ffffff`). |
+| Accent color | `#6366F1` | Same value as primary in this screen (`--color-accent`) — there's no distinct secondary accent yet. |
+| Heading font | Inter | Loaded via Google Fonts `<link>` in `apps/web/index.html` (weights 400–800). Used for both headings and body — no separate display face. |
+| Body / UI font | Inter | Same face as headings, mapped to `font-sans` via `--font-sans` in `index.css`. |
+| Type rule (serif/italic policy) | Sans-only, no italic observed | Not written as an explicit rule anywhere yet — just the pattern the one shipped screen follows. Confirm before treating as locked. |
+| Destructive-action color | `#dc2626` | `--color-destructive`, currently only used for form validation error text on the Cognify screen — not yet exercised on a real destructive action (delete/sign-out) anywhere. |
 
 ---
 
@@ -76,40 +76,44 @@ Nothing here (`AppShell.tsx`, `AppTopBar.tsx`, sidebar collapse behavior, card r
 
 ---
 
-## 3. Design tokens — `[TBD]`
+## 3. Design tokens — first real values landed, still incomplete
 
-No `@theme` block exists yet in `apps/web/src/index.css` (Tailwind v4 is present via `@import 'tailwindcss';`, but no custom tokens are defined). Once colors/fonts are decided, define them there and mirror the table below for review — don't let the two drift.
+`apps/web/src/index.css` now has a real `@theme` block (Tailwind v4). Values below are live, taken directly from that file — but it only covers what the Cognify screen needed, so several rows other screens will need are still open.
 
 | Token | Hex | Use |
 | --- | --- | --- |
-| `--color-canvas` | `[TBD]` | Page background |
-| `--color-card` | `[TBD]` | Card surfaces |
-| `--color-primary` | `[TBD]` | Primary actions, active nav |
-| `--color-accent` | `[TBD]` | Accent/secondary emphasis |
-| `--color-foreground` | `[TBD]` | Primary text |
-| `--color-muted-foreground` | `[TBD]` | Secondary/placeholder text |
-| `--color-border` | `[TBD]` | Borders, inputs |
-| `--color-success` / `--color-warning` / `--color-danger` | `[TBD]` | See §11 — pick these alongside the universal status colors, not independently |
-| `--radius` | `[TBD]` | Card/input corner radius |
+| `--color-canvas` | `#fcfcff` | Page background |
+| `--color-card` | `#ffffff` | Card surfaces |
+| `--color-primary` / `--color-primary-hover` | `#6366f1` / `#4f46e5` | Primary actions, CTAs |
+| `--color-accent` / `--color-accent-soft` / `--color-accent-foreground` | `#6366f1` / `#eef2ff` / `#4338ca` | Accent emphasis, soft tinted backgrounds (e.g. mobile logo chip) |
+| `--color-foreground` | `#0f172a` | Primary text |
+| `--color-muted-foreground` | `#64748b` | Secondary/placeholder text |
+| `--color-border` / `--color-input` | `#e7e5f3` | Borders, inputs |
+| `--color-destructive` / `--color-destructive-foreground` | `#dc2626` / `#ffffff` | Form validation errors so far — not yet a real destructive-action button |
+| `--color-success` | `#16a34a` | Defined but not yet used anywhere real |
+| `--color-warning` / `--color-danger` (§11 status colors) | `[TBD]` | Still open — don't assume `--color-destructive` doubles as the §11 "danger" status color without deciding that explicitly |
+| Card/input radius | `rounded-xl` (Tailwind's built-in 12px) | No custom `--radius` token was added — Tailwind v4's default `rounded-xl` already equals 12px, so the spec's "12px cards" requirement is met by the stock utility. Buttons use `rounded-full`, not the radius token. |
+| Card glow | `.shadow-glow` / `.shadow-glow-sm` utility classes in `index.css` | Indigo-tinted `box-shadow` at ~12–16% opacity — the "subtle card glow" from the Cognify screen's spec, not (yet) a general convention. |
 
-shadcn's semantic mapping (`--background`, `--foreground`, `--card`, `--primary`, `--secondary`/`--muted`, `--accent`, `--destructive`, `--border`/`--input`, `--ring`) should be derived from the tokens above once they exist — don't define shadcn variables independently.
-
----
-
-## 4. Typography — `[TBD]`
-
-`apps/web/index.html` currently loads no web fonts. Decide heading/body fonts and add the `<link>` there, then record the choice here (font names, weight axes, and whether headings get a distinct `.font-display` class as in the CarMan-style template this doc is adapted from).
+There is still no shadcn-style semantic remapping (`--background`, `--card`, `--primary`, `--destructive`, `--ring`, etc.) — the tokens above are consumed directly as Tailwind utilities (`bg-primary`, `text-muted-foreground`, ...), not through a shadcn `:root` mapping layer, because shadcn's CLI was never run (see §5).
 
 ---
 
-## 5. shadcn/ui primitives — none installed yet
+## 4. Typography — Inter, single face
 
-`apps/web` has no `src/components/ui/` directory and no `src/lib/utils.ts` (`cn()` helper) today. When shadcn is added:
+`apps/web/index.html` loads Inter via Google Fonts (`wght@400;500;600;700;800`). It's used for both headings and body — there is no distinct `.font-display` class or second face, unlike the CarMan-style template this doc is adapted from. Headings use `tracking-tight` + `font-semibold`; body copy is unstyled `text-sm`/`text-[15px]`. This is one screen's worth of evidence, not a fully specified type ramp (no documented scale for h2/h3/caption sizes yet) — treat as a starting point, not a finished system.
 
-- Install via `npx shadcn@latest add <component>` — **never** hand-write these files, and **never** re-run the CLI over an existing customized primitive (it silently overwrites custom variants).
-- The rule files already assume a working set including: `button`, `input`, `form`, `dialog`, `table`, `badge`, `select`, `checkbox`, `calendar`, `textarea`, `tooltip`, `popover`, `separator`, `dropdown-menu`, `sonner` (toast), and a `sheet` for context panels. Install these first.
-- `dialog.tsx` needs the project's custom `showCloseButton?: boolean` prop (default `true`) per `rules/dialog.md` — it wraps `@base-ui/react/dialog`, not Radix, so don't copy Radix-based shadcn dialog code verbatim.
-- `badge.tsx` will need custom status variants once §11's colors are decided — plan for that customization before treating it as a stock primitive.
+---
+
+## 5. shadcn/ui primitives — 5 exist, but hand-written, not CLI-generated
+
+**Deviation from `rules/components.md`, done knowingly, not silently:** `apps/web/src/components/ui/{button,input,label,form,separator}.tsx` and `apps/web/src/lib/utils.ts` (`cn()`) now exist, built for the Cognify screen. They were **hand-authored to shadcn's standard API shape**, not produced via `npx shadcn@latest add ...`, because that CLI flow was multiple minutes per package in the environment they were built in and the screen needed to ship. They intentionally skip the Radix dependencies (`@radix-ui/react-label`, `@radix-ui/react-slot`) the canonical versions pull in — `FormControl` reimplements Slot's single-child prop-merging via `React.cloneElement` instead.
+
+**Before building the next screen:** either (a) run the real CLI to regenerate these five and diff against the hand-written versions, accepting the Radix dependency, or (b) explicitly decide the hand-written versions are good enough to keep — but don't silently add a sixth hand-written primitive without revisiting this choice first, since `rules/components.md` still says CLI-only.
+
+Still not installed: `dialog`, `table`, `badge`, `select`, `checkbox`, `calendar`, `textarea`, `tooltip`, `popover`, `dropdown-menu`, `sonner`, `sheet`. Same two caveats as before apply once they are:
+- `dialog.tsx` needs the project's custom `showCloseButton?: boolean` prop (default `true`) per `rules/dialog.md` — it wraps `@base-ui/react/dialog`, not Radix.
+- `badge.tsx` will need custom status variants once §11's colors are decided.
 
 ---
 
@@ -125,21 +129,39 @@ Not built yet. `AppShell` (sidebar + top bar + `<main>` slot) and `AppTopBar` wo
 
 ---
 
-## 8. Modules (planned) — `src/modules/`
+## 8. Modules — `src/modules/onboarding/` is the first one
 
-None exist yet. `apps/api/src/domains/example/` is the only real reference structure in the repo today (generic CRUD: `name`, `col1`, `col2`, `col3`) — mirror its shape for the frontend's first `src/modules/<feature>/` per `rules/modules.md`, rather than inventing a new structure.
+| Module | Screens / components built |
+| --- | --- |
+| `onboarding` | `CreateAccountScreen` (Create Account / sign-up), `OnboardingLeftPanel` (shared two-panel branding side), `PasswordStrengthField`, `SocialAuthButtons` |
+
+Structure follows `rules/modules.md`: `@types/index.ts` (component Props), `constants/index.ts` (product name, password rules), `components/<sub-feature>/`. It does **not** yet have `service/`, `utils/`, or `__tests__/` — there's no backend endpoint to call yet (see below) and no pure helpers beyond what's inline, so those folders were skipped rather than stubbed empty; add them when something real needs to go there.
+
+Zod schema + its inferred `CreateAccountFormValues` type live in `components/create-account/schema.ts`, colocated with the form that uses them, not in `@types/index.ts` — matches `rules/typescript.md`'s "Zod schema is the source of truth" guidance better than duplicating the shape in `@types`.
+
+**No real registration endpoint exists in `apps/api`** (only the generic `example` domain does). `CreateAccountScreen`'s submit handler validates client-side and logs via `logger`, marked `MOCK:API` — it does not call `service/api.ts` because there's nothing real to call yet. Wire this up properly once a registration endpoint exists, per `rules/api.md`.
 
 ---
 
-## 9. Screens (planned) — `src/screens/`
+## 9. Screens — correction: this repo doesn't use `src/screens/`
 
-None exist yet. `apps/web`'s only current screen is the `App.tsx` showcase/demo page described in `CLAUDE.md` (Tailwind test grid, local counter, Redux counter, secure-storage demo, PHI-logger demo) — not real product UI, and there is no router installed (`react-router-dom` is not a dependency of `apps/web` today).
+The original CarMan-derived version of this doc assumed a flat `src/screens/` folder (copied from that project's structure). **That's wrong for this repo** — `rules/modules.md` (the real, authoritative rule here) puts screens inside `src/modules/<feature>/components/`, and that's where `CreateAccountScreen` actually landed. This section is corrected rather than filled in: don't create a `src/screens/` folder here, and disregard this doc's earlier assumption that one would exist.
+
+`apps/web`'s `App.tsx` no longer renders the old showcase/demo page — it now renders `CreateAccountScreen` directly. The demo content (Tailwind test grid, local counter, Redux counter, secure-storage demo, PHI-logger demo) was removed from the render tree, not deleted from the repo's history, but there is currently no way to view it without checking out an earlier commit or re-adding a route to it. There is still no router installed (`react-router-dom` is not a dependency of `apps/web`), so `App.tsx` can only ever render one screen at a time today.
 
 ---
 
 ## 10. UI patterns established
 
-None yet. Document reusable patterns here as they emerge (e.g. a section-header convention, a tooltip/popover panel pattern, a read-only context provider for a detail view) — don't pre-populate this with patterns from another project's domain.
+### Two-panel onboarding layout (`OnboardingLeftPanel`)
+
+`rules/onboarding-patterns.md`'s two-panel convention is now proven with a real screen: `OnboardingLeftPanel` (`hidden lg:flex`, indigo gradient, headline + feature bullets + floating stat chips) at `lg:w-[40%]`, paired with a `flex-1 lg:w-[60%]` content column carrying the mobile logo fallback, the form, and the `© 2026 Cognify` footer — matching the rule file's layout shape, but with a 40/60 split rather than an unspecified ratio (the rule file didn't pin one). Reuse `OnboardingLeftPanel` as-is for the next onboarding screen (sign-in, forgot-password) rather than rebuilding it.
+
+### Live password-strength meter (`PasswordStrengthField`)
+
+Implements `rules/onboarding-patterns.md`'s `STRENGTH_RULES` pattern exactly: 4-segment bar + 2×2 checklist, driven by `form.watch`-style live `password` value with `mode: 'onChange'` on the form. Backed by a Zod schema with matching regex rules, so the visual requirements and actual validation never drift apart. Reuse for reset-password screens.
+
+Not yet established: a section-header convention, tooltip/popover panel pattern, or a read-only detail-view context provider — none of those exist in any shipped screen yet.
 
 ---
 
@@ -180,11 +202,15 @@ This is already partially real, not aspirational — keep it if Backend AI handl
 
 ### Actually installed today (`apps/web/package.json`)
 
-`@reduxjs/toolkit`, `react-redux`, `redux-persist`, `crypto-js`, `react`/`react-dom` 19, Tailwind v4 (`@tailwindcss/postcss`), Vite, plus Jest-oriented test tooling (`@testing-library/react`, `@testing-library/jest-dom`, `@testing-library/user-event`, `jest-environment-jsdom`, `identity-obj-proxy`).
+`@reduxjs/toolkit`, `react-redux`, `redux-persist`, `crypto-js`, `react`/`react-dom` 19, Tailwind v4 (`@tailwindcss/postcss`), Vite, plus Jest-oriented test tooling (`@testing-library/react`, `@testing-library/jest-dom`, `@testing-library/user-event`, `jest-environment-jsdom`, `identity-obj-proxy`) — **plus, added for the Cognify screen:** `react-hook-form`, `zod`, `@hookform/resolvers`, `lucide-react`, `class-variance-authority`, `clsx`, `tailwind-merge`.
 
-### Required by the rule files but not yet installed
+### Required by the rule files but still not installed
 
-Before the `.claude/rules/*` conventions are actually followable, these need to be added: `shadcn/ui` (+ `class-variance-authority`, `clsx`, `tailwind-merge`), `@base-ui/react`, `react-hook-form`, `@hookform/resolvers`, `zod`, `@tanstack/react-table`, `sonner`, `date-fns`, `react-router-dom`, `lucide-react`. Don't assume any of these exist until you check `apps/web/package.json` again — this list will go stale the moment the first is added.
+`shadcn/ui` (the CLI itself was never run — see §5), `@base-ui/react` (needed once `dialog.tsx` is built), `@tanstack/react-table`, `sonner`, `date-fns`, `react-router-dom`. Don't assume any of these exist until you check `apps/web/package.json` again — this list will go stale the moment the first is added.
+
+### Vite config change worth knowing about
+
+`apps/web/vite.config.ts` now has an explicit `resolve.alias` for `@` → `./src`. The `@nx/vite` `nxViteTsPaths()` plugin (already in the config) did **not** pick up the `@/*` path added to `tsconfig.app.json` — imports 500'd until the alias was added directly to `vite.config.ts`. If path aliases stop resolving after a tsconfig change, check whether `nxViteTsPaths()` is actually reading the updated config before assuming something else broke.
 
 ---
 

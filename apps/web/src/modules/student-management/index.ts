@@ -1,0 +1,1 @@
+export { StudentManagementScreen } from './components';

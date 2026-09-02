@@ -2,7 +2,7 @@
   "info": {
     "_postman_id": "6e2b7b9a-6b2c-4b3e-9b0e-1a2b3c4d5e6f",
     "name": "Backend AI API",
-    "description": "Generated from the current apps/api NestJS backend. Global prefix is `/api/v1` (except `health`, which is *supposed* to be excluded but isn't — see the note on the Health Check request). Two domains exist today: `health-check` and `example` (the generic CRUD reference template — real fields are literally `name`/`col1`/`col2`/`col3`).\n\nKnown bug (see CLAUDE.md): both `HealthCheckController` and `ExampleController` use bare `@Controller()` with argument-less `@Get()` handlers, so both resolve to `GET /api/v1`. Because `HealthCheckModule` is imported before `ExampleModule` in `app.module.ts`, the health check handler wins and `ExampleController.getAll` is currently unreachable through the HTTP layer.",
+    "description": "Generated from the current apps/api NestJS backend. Global prefix is `/api/v1` (except `health`, which is *supposed* to be excluded but isn't — see the note on the Health Check request). Domains: `health-check`, `example` (generic CRUD reference template — real fields are literally `name`/`col1`/`col2`/`col3`), `auth` (real: `POST /auth/register`, `POST /auth/login`), and `student` (real: `POST /students`, `PUT /students/:id` — name is immutable on update, see the Update Student request's description).\n\nKnown bug (see CLAUDE.md): both `HealthCheckController` and `ExampleController` use bare `@Controller()` with argument-less `@Get()` handlers, so both resolve to `GET /api/v1`. Because `HealthCheckModule` is imported before `ExampleModule` in `app.module.ts`, the health check handler wins and `ExampleController.getAll` is currently unreachable through the HTTP layer.\n\nSeparate known issue: errors thrown inside a domain service (e.g. `auth`'s duplicate-email `ConflictException`) don't go through the documented Express-level `errorHandler` — Nest's own exception pipeline intercepts them first, so the response shape for those is `{statusCode, message}` (2 keys), not the `{status, message, error}` (3 keys) shape the rest of the API uses. Both are shown as example responses on the Register request below.",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "auth": {
@@ -14,9 +14,310 @@
   "variable": [
     { "key": "baseUrl", "value": "http://localhost:4000", "type": "string" },
     { "key": "token", "value": "", "type": "string" },
-    { "key": "exampleId", "value": "", "type": "string" }
+    { "key": "exampleId", "value": "", "type": "string" },
+    { "key": "registerEmail", "value": "ada@example.com", "type": "string" },
+    { "key": "studentId", "value": "", "type": "string" }
   ],
   "item": [
+    {
+      "name": "Auth",
+      "description": "Real domain — apps/api/src/domains/auth. Password rules (min 8 chars, uppercase, number, special char) are enforced server-side via Joi and mirror the frontend's Zod schema in apps/web/src/modules/onboarding/components/create-account/schema.ts.",
+      "item": [
+        {
+          "name": "Register",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"firstName\": \"Ada\",\n  \"lastName\": \"Lovelace\",\n  \"email\": \"{{registerEmail}}\",\n  \"password\": \"Abcdef1!23\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/auth/register",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "auth", "register"]
+            },
+            "description": "Change {{registerEmail}} (collection variable) before re-running — the email column has a unique index, so re-submitting the same address hits the 409 example below instead of creating a new account."
+          },
+          "response": [
+            {
+              "name": "201 Created",
+              "originalRequest": {
+                "method": "POST",
+                "header": [{ "key": "Content-Type", "value": "application/json" }],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"firstName\": \"Ada\",\n  \"lastName\": \"Lovelace\",\n  \"email\": \"ada@example.com\",\n  \"password\": \"Abcdef1!23\"\n}"
+                },
+                "url": { "raw": "{{baseUrl}}/api/v1/auth/register", "host": ["{{baseUrl}}"], "path": ["api", "v1", "auth", "register"] }
+              },
+              "status": "Created",
+              "code": 201,
+              "_postman_previewlanguage": "json",
+              "header": [{ "key": "Content-Type", "value": "application/json" }],
+              "body": "{\n  \"status\": 201,\n  \"message\": \"Created successfully\",\n  \"data\": {\n    \"id\": \"5c972fbd-359c-4207-85a1-89536757bdfb\",\n    \"firstName\": \"Ada\",\n    \"lastName\": \"Lovelace\",\n    \"email\": \"ada@example.com\",\n    \"createdAt\": \"2026-09-02T09:31:36.799Z\"\n  }\n}"
+            },
+            {
+              "name": "409 Conflict (duplicate email — see collection description)",
+              "originalRequest": {
+                "method": "POST",
+                "header": [{ "key": "Content-Type", "value": "application/json" }],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"firstName\": \"Ada\",\n  \"lastName\": \"Lovelace\",\n  \"email\": \"ada@example.com\",\n  \"password\": \"Abcdef1!23\"\n}"
+                },
+                "url": { "raw": "{{baseUrl}}/api/v1/auth/register", "host": ["{{baseUrl}}"], "path": ["api", "v1", "auth", "register"] }
+              },
+              "status": "Conflict",
+              "code": 409,
+              "_postman_previewlanguage": "json",
+              "header": [{ "key": "Content-Type", "value": "application/json" }],
+              "body": "{\n  \"statusCode\": 409,\n  \"message\": \"An account with this email already exists\"\n}"
+            },
+            {
+              "name": "400 Bad Request (weak password)",
+              "originalRequest": {
+                "method": "POST",
+                "header": [{ "key": "Content-Type", "value": "application/json" }],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"firstName\": \"Ada\",\n  \"lastName\": \"Lovelace\",\n  \"email\": \"ada@example.com\",\n  \"password\": \"weak\"\n}"
+                },
+                "url": { "raw": "{{baseUrl}}/api/v1/auth/register", "host": ["{{baseUrl}}"], "path": ["api", "v1", "auth", "register"] }
+              },
+              "status": "Bad Request",
+              "code": 400,
+              "_postman_previewlanguage": "json",
+              "header": [{ "key": "Content-Type", "value": "application/json" }],
+              "body": "{\n  \"status\": 400,\n  \"message\": \"Validation failed\",\n  \"errors\": [\n    { \"field\": \"password\", \"message\": \"\\\"password\\\" length must be at least 8 characters long\" },\n    { \"field\": \"password\", \"message\": \"\\\"password\\\" with value \\\"weak\\\" fails to match the uppercase letter pattern\" },\n    { \"field\": \"password\", \"message\": \"\\\"password\\\" with value \\\"weak\\\" fails to match the number pattern\" },\n    { \"field\": \"password\", \"message\": \"\\\"password\\\" with value \\\"weak\\\" fails to match the special character pattern\" }\n  ],\n  \"error\": \"Bad Request\"\n}"
+            }
+          ]
+        },
+        {
+          "name": "Login",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"{{registerEmail}}\",\n  \"password\": \"Abcdef1!23\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/auth/login",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "auth", "login"]
+            },
+            "description": "Wrong password and unknown email both return the exact same 401 message — deliberate, to avoid leaking which emails are registered. Copy the `token` from a 200 response into the collection's `token` variable to use the Bearer-auth requests elsewhere (note: authenticate.middleware.ts isn't wired to any route yet, so no endpoint actually checks it today)."
+          },
+          "response": [
+            {
+              "name": "200 OK",
+              "originalRequest": {
+                "method": "POST",
+                "header": [{ "key": "Content-Type", "value": "application/json" }],
+                "body": { "mode": "raw", "raw": "{\n  \"email\": \"ada@example.com\",\n  \"password\": \"Abcdef1!23\"\n}" },
+                "url": { "raw": "{{baseUrl}}/api/v1/auth/login", "host": ["{{baseUrl}}"], "path": ["api", "v1", "auth", "login"] }
+              },
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [{ "key": "Content-Type", "value": "application/json" }],
+              "body": "{\n  \"status\": 200,\n  \"data\": {\n    \"token\": \"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...\",\n    \"user\": {\n      \"id\": \"ef4ac12a-1de3-4a67-892b-043d3d546225\",\n      \"firstName\": \"Ada\",\n      \"lastName\": \"Lovelace\",\n      \"email\": \"ada@example.com\",\n      \"createdAt\": \"2026-09-02T10:33:07.091Z\"\n    }\n  }\n}"
+            },
+            {
+              "name": "401 Unauthorized (wrong password OR unknown email — identical either way)",
+              "originalRequest": {
+                "method": "POST",
+                "header": [{ "key": "Content-Type", "value": "application/json" }],
+                "body": { "mode": "raw", "raw": "{\n  \"email\": \"ada@example.com\",\n  \"password\": \"wrong\"\n}" },
+                "url": { "raw": "{{baseUrl}}/api/v1/auth/login", "host": ["{{baseUrl}}"], "path": ["api", "v1", "auth", "login"] }
+              },
+              "status": "Unauthorized",
+              "code": 401,
+              "_postman_previewlanguage": "json",
+              "header": [{ "key": "Content-Type", "value": "application/json" }],
+              "body": "{\n  \"statusCode\": 401,\n  \"message\": \"Invalid email or password\"\n}"
+            },
+            {
+              "name": "401 Unauthorized (missing field — validateLogin never returns 400)",
+              "originalRequest": {
+                "method": "POST",
+                "header": [{ "key": "Content-Type", "value": "application/json" }],
+                "body": { "mode": "raw", "raw": "{\n  \"email\": \"ada@example.com\"\n}" },
+                "url": { "raw": "{{baseUrl}}/api/v1/auth/login", "host": ["{{baseUrl}}"], "path": ["api", "v1", "auth", "login"] }
+              },
+              "status": "Unauthorized",
+              "code": 401,
+              "_postman_previewlanguage": "json",
+              "header": [{ "key": "Content-Type", "value": "application/json" }],
+              "body": "{\n  \"status\": 401,\n  \"message\": \"Invalid email or password\",\n  \"error\": \"Unauthorized\"\n}"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Students",
+      "description": "Real domain — apps/api/src/domains/student. Every field is required, matching the frontend Add Student form. `course` must be one of the fixed course list (apps/api/src/domains/student/constants/courses.constants.ts) or Joi rejects it with 400. Only create exists so far — no list/update/deactivate/delete endpoints yet.",
+      "item": [
+        {
+          "name": "Create Student",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"firstName\": \"Marie\",\n  \"lastName\": \"Curie\",\n  \"email\": \"marie.curie@example.com\",\n  \"phone\": \"(555) 555-0100\",\n  \"course\": \"Cybersecurity Fundamentals\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/students",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "students"]
+            },
+            "description": "studentId (e.g. STU-2401) is generated server-side — don't send it. Change the email before re-running, or you'll hit the 409 example below."
+          },
+          "response": [
+            {
+              "name": "201 Created",
+              "originalRequest": {
+                "method": "POST",
+                "header": [{ "key": "Content-Type", "value": "application/json" }],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"firstName\": \"Marie\",\n  \"lastName\": \"Curie\",\n  \"email\": \"marie.curie@example.com\",\n  \"phone\": \"(555) 555-0100\",\n  \"course\": \"Cybersecurity Fundamentals\"\n}"
+                },
+                "url": { "raw": "{{baseUrl}}/api/v1/students", "host": ["{{baseUrl}}"], "path": ["api", "v1", "students"] }
+              },
+              "status": "Created",
+              "code": 201,
+              "_postman_previewlanguage": "json",
+              "header": [{ "key": "Content-Type", "value": "application/json" }],
+              "body": "{\n  \"status\": 201,\n  \"message\": \"Created successfully\",\n  \"data\": {\n    \"id\": \"9cdd1f20-c30c-4dac-a858-0caa543bb538\",\n    \"studentId\": \"STU-2401\",\n    \"firstName\": \"Marie\",\n    \"lastName\": \"Curie\",\n    \"email\": \"marie.curie@example.com\",\n    \"phone\": \"(555) 555-0100\",\n    \"course\": \"Cybersecurity Fundamentals\",\n    \"status\": \"active\",\n    \"assignedOn\": \"2026-09-02T12:19:03.576Z\",\n    \"createdAt\": \"2026-09-02T12:19:03.576Z\"\n  }\n}"
+            },
+            {
+              "name": "409 Conflict (duplicate email)",
+              "originalRequest": {
+                "method": "POST",
+                "header": [{ "key": "Content-Type", "value": "application/json" }],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"firstName\": \"Marie\",\n  \"lastName\": \"Curie\",\n  \"email\": \"marie.curie@example.com\",\n  \"phone\": \"(555) 555-0100\",\n  \"course\": \"Cybersecurity Fundamentals\"\n}"
+                },
+                "url": { "raw": "{{baseUrl}}/api/v1/students", "host": ["{{baseUrl}}"], "path": ["api", "v1", "students"] }
+              },
+              "status": "Conflict",
+              "code": 409,
+              "_postman_previewlanguage": "json",
+              "header": [{ "key": "Content-Type", "value": "application/json" }],
+              "body": "{\n  \"statusCode\": 409,\n  \"message\": \"A student with this email already exists\"\n}"
+            },
+            {
+              "name": "400 Bad Request (missing field)",
+              "originalRequest": {
+                "method": "POST",
+                "header": [{ "key": "Content-Type", "value": "application/json" }],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"firstName\": \"Ada\",\n  \"lastName\": \"Lovelace\",\n  \"email\": \"ada2@example.com\",\n  \"course\": \"Web Development\"\n}"
+                },
+                "url": { "raw": "{{baseUrl}}/api/v1/students", "host": ["{{baseUrl}}"], "path": ["api", "v1", "students"] }
+              },
+              "status": "Bad Request",
+              "code": 400,
+              "_postman_previewlanguage": "json",
+              "header": [{ "key": "Content-Type", "value": "application/json" }],
+              "body": "{\n  \"status\": 400,\n  \"message\": \"Validation failed\",\n  \"errors\": [\n    { \"field\": \"phone\", \"message\": \"\\\"phone\\\" is required\" }\n  ],\n  \"error\": \"Bad Request\"\n}"
+            },
+            {
+              "name": "400 Bad Request (course not in allowed list)",
+              "originalRequest": {
+                "method": "POST",
+                "header": [{ "key": "Content-Type", "value": "application/json" }],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"firstName\": \"Ada\",\n  \"lastName\": \"Lovelace\",\n  \"email\": \"ada3@example.com\",\n  \"phone\": \"5551234567\",\n  \"course\": \"Underwater Basket Weaving\"\n}"
+                },
+                "url": { "raw": "{{baseUrl}}/api/v1/students", "host": ["{{baseUrl}}"], "path": ["api", "v1", "students"] }
+              },
+              "status": "Bad Request",
+              "code": 400,
+              "_postman_previewlanguage": "json",
+              "header": [{ "key": "Content-Type", "value": "application/json" }],
+              "body": "{\n  \"status\": 400,\n  \"message\": \"Validation failed\",\n  \"errors\": [\n    { \"field\": \"course\", \"message\": \"\\\"course\\\" must be one of [Data Structures & Algorithms, Computer Networks, Operating Systems, Database Management Systems, Object-Oriented Programming, Computer Architecture, Software Engineering, Machine Learning Fundamentals, Web Development, Cybersecurity Fundamentals, Discrete Mathematics for CS, Cloud Computing]\" }\n  ],\n  \"error\": \"Bad Request\"\n}"
+            }
+          ]
+        },
+        {
+          "name": "Update Student",
+          "request": {
+            "method": "PUT",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"marie.curie@example.com\",\n  \"phone\": \"5559998888\",\n  \"course\": \"Cloud Computing\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/students/{{studentId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "students", "{{studentId}}"]
+            },
+            "description": "firstName/lastName are deliberately not accepted here — a student's name is immutable after enrollment. Sending them anyway is silently ignored (validate() strips unknown keys before the controller ever sees them); this was verified directly, not just documented. Set the {{studentId}} collection variable to a real student's `id` (the UUID, not the human-readable STU-xxxx) from a Create Student response first."
+          },
+          "response": [
+            {
+              "name": "200 OK",
+              "originalRequest": {
+                "method": "PUT",
+                "header": [{ "key": "Content-Type", "value": "application/json" }],
+                "body": { "mode": "raw", "raw": "{\n  \"email\": \"edit-test-updated@example.com\",\n  \"phone\": \"5559998888\",\n  \"course\": \"Cloud Computing\"\n}" },
+                "url": { "raw": "{{baseUrl}}/api/v1/students/{{studentId}}", "host": ["{{baseUrl}}"], "path": ["api", "v1", "students", "{{studentId}}"] }
+              },
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [{ "key": "Content-Type", "value": "application/json" }],
+              "body": "{\n  \"status\": 200,\n  \"message\": \"Updated successfully\",\n  \"data\": {\n    \"id\": \"1df82c3e-4965-4383-b459-9309898e9030\",\n    \"studentId\": \"STU-2402\",\n    \"firstName\": \"Edit\",\n    \"lastName\": \"Test\",\n    \"email\": \"edit-test-updated@example.com\",\n    \"phone\": \"5559998888\",\n    \"course\": \"Cloud Computing\",\n    \"status\": \"active\",\n    \"assignedOn\": \"2026-09-02T12:44:48.701Z\",\n    \"createdAt\": \"2026-09-02T12:44:48.701Z\"\n  }\n}"
+            },
+            {
+              "name": "404 Not Found",
+              "originalRequest": {
+                "method": "PUT",
+                "header": [{ "key": "Content-Type", "value": "application/json" }],
+                "body": { "mode": "raw", "raw": "{\n  \"email\": \"nobody@example.com\",\n  \"phone\": \"5551112222\",\n  \"course\": \"Cloud Computing\"\n}" },
+                "url": { "raw": "{{baseUrl}}/api/v1/students/00000000-0000-0000-0000-000000000000", "host": ["{{baseUrl}}"], "path": ["api", "v1", "students", "00000000-0000-0000-0000-000000000000"] }
+              },
+              "status": "Not Found",
+              "code": 404,
+              "_postman_previewlanguage": "json",
+              "header": [{ "key": "Content-Type", "value": "application/json" }],
+              "body": "{\n  \"statusCode\": 404,\n  \"message\": \"Student with ID 00000000-0000-0000-0000-000000000000 not found\"\n}"
+            },
+            {
+              "name": "409 Conflict (email already used by another student)",
+              "originalRequest": {
+                "method": "PUT",
+                "header": [{ "key": "Content-Type", "value": "application/json" }],
+                "body": { "mode": "raw", "raw": "{\n  \"email\": \"other-student@example.com\",\n  \"phone\": \"5559998888\",\n  \"course\": \"Cloud Computing\"\n}" },
+                "url": { "raw": "{{baseUrl}}/api/v1/students/{{studentId}}", "host": ["{{baseUrl}}"], "path": ["api", "v1", "students", "{{studentId}}"] }
+              },
+              "status": "Conflict",
+              "code": 409,
+              "_postman_previewlanguage": "json",
+              "header": [{ "key": "Content-Type", "value": "application/json" }],
+              "body": "{\n  \"statusCode\": 409,\n  \"message\": \"Another student is already using this email\"\n}"
+            }
+          ]
+        }
+      ]
+    },
     {
       "name": "Health",
       "item": [

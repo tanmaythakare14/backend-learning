@@ -10,6 +10,7 @@ import {
   REGISTER,
 } from 'redux-persist';
 import { secureLocalStorage } from '../utils/secureStorage';
+import authReducer from './slices/authSlice';
 
 /**
  * Secure storage adapter for redux-persist
@@ -47,10 +48,7 @@ const persistConfig = {
  * Sample reducer — replace or extend with your own slices.
  * State is automatically persisted and AES-encrypted via secureStorage.
  */
-const sampleReducer = (
-  state = { count: 0 },
-  action: { type: string; payload?: unknown },
-) => {
+const sampleReducer = (state = { count: 0 }, action: { type: string; payload?: unknown }) => {
   switch (action.type) {
     case 'increment':
       return { ...state, count: (state.count as number) + 1 };
@@ -64,6 +62,7 @@ const sampleReducer = (
 const rootReducer = combineReducers({
   // Add your feature slices here
   sample: sampleReducer,
+  auth: authReducer,
 });
 
 const persistedReducer = persistReducer(persistConfig, rootReducer);

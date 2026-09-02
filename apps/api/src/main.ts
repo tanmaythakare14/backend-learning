@@ -26,7 +26,10 @@ async function bootstrap(): Promise<void> {
   // CORS — same logic as Node repo
   const allowedOrigins = (process.env.ALLOWED_ORIGINS || 'http://localhost:3000').split(',');
   app.enableCors({
-    origin: (origin: string | undefined, callback: (err: Error | null, allow?: boolean) => void) => {
+    origin: (
+      origin: string | undefined,
+      callback: (err: Error | null, allow?: boolean) => void,
+    ) => {
       if (!origin || allowedOrigins.includes(origin)) {
         callback(null, true);
       } else {
@@ -48,11 +51,6 @@ async function bootstrap(): Promise<void> {
     SwaggerModule.setup('docs', app, document);
   }
 
-  // Express-level error handling (same as Node repo — errorHandler must be last)
-  const httpAdapter = app.getHttpAdapter().getInstance();
-  httpAdapter.use(notFoundHandler);
-  httpAdapter.use(errorHandler);
-
   // Graceful shutdown — from Node repo
   const shutdown = (signal: string): void => {
     logger.info(`${signal} received. Starting graceful shutdown...`);
@@ -63,6 +61,14 @@ async function bootstrap(): Promise<void> {
 
   const port = parseInt(process.env.PORT || '4000', 10);
   await app.listen(port);
+
+  // Express-level error handling (same as Node repo — errorHandler must be last).
+  // Must be attached after app.listen(), since that's what triggers Nest's internal
+  // route binding — attaching earlier put these ahead of every controller route,
+  // so they caught (and 404'd) every request before Nest's router ever ran.
+  const httpAdapter = app.getHttpAdapter().getInstance();
+  httpAdapter.use(notFoundHandler);
+  httpAdapter.use(errorHandler);
 
   logger.info('Server started successfully');
   logger.info(`Port: ${port}`);
