@@ -198,9 +198,21 @@
               "host": ["{{baseUrl}}"],
               "path": ["api", "v1", "students"],
               "query": [
-                { "key": "status", "value": "active", "description": "active | deactivated | deleted — defaults to active if omitted" },
-                { "key": "course", "value": "Web Development,Cloud Computing", "description": "Comma-separated course names, or repeat the param (?course=A&course=B)" },
-                { "key": "search", "value": "", "description": "Matches first name, last name, or email" }
+                {
+                  "key": "status",
+                  "value": "active",
+                  "description": "active | deactivated | deleted — defaults to active if omitted"
+                },
+                {
+                  "key": "course",
+                  "value": "Web Development,Cloud Computing",
+                  "description": "Comma-separated course names, or repeat the param (?course=A&course=B)"
+                },
+                {
+                  "key": "search",
+                  "value": "",
+                  "description": "Matches first name, last name, or email"
+                }
               ]
             },
             "description": "All three query params are optional and independent — combine any subset. Remove the ones you don't need from the Params tab rather than leaving them empty, since an empty search='' still runs (harmlessly matches everything)."
@@ -211,7 +223,12 @@
               "originalRequest": {
                 "method": "GET",
                 "header": [],
-                "url": { "raw": "{{baseUrl}}/api/v1/students?course=Web Development", "host": ["{{baseUrl}}"], "path": ["api", "v1", "students"], "query": [{ "key": "course", "value": "Web Development" }] }
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/students?course=Web Development",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["api", "v1", "students"],
+                  "query": [{ "key": "course", "value": "Web Development" }]
+                }
               },
               "status": "OK",
               "code": 200,
@@ -224,7 +241,12 @@
               "originalRequest": {
                 "method": "GET",
                 "header": [],
-                "url": { "raw": "{{baseUrl}}/api/v1/students?status=bogus", "host": ["{{baseUrl}}"], "path": ["api", "v1", "students"], "query": [{ "key": "status", "value": "bogus" }] }
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/students?status=bogus",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["api", "v1", "students"],
+                  "query": [{ "key": "status", "value": "bogus" }]
+                }
               },
               "status": "Bad Request",
               "code": 400,
