@@ -1,17 +1,34 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import type { JSX } from 'react';
-import { Search, UserPlus } from 'lucide-react';
+import { Loader2, Search, UserPlus } from 'lucide-react';
 import { toast } from 'sonner';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { ConfirmDialog } from '@/components/common/ConfirmDialog';
-import { STUDENT_STATUS_TABS, MOCK_STUDENTS } from '../constants';
-import { generateNextStudentId } from '../utils';
+import { ApiError } from '@/utils/apiError';
+import { STUDENT_STATUS_TABS } from '../constants';
 import type { Student, StudentStatus, StudentFormValues } from '../@types';
 import { StudentTable } from './student-table';
 import { CourseFilterPopover } from './course-filter';
 import { AddEditStudentDialog } from './student-form';
+import {
+  listStudents,
+  createStudent,
+  updateStudent,
+  apiDtoToStudent,
+  formValuesToCreatePayload,
+  formValuesToUpdatePayload,
+} from '../service';
+
+const ALL_STATUSES: StudentStatus[] = ['active', 'deactivated', 'deleted'];
+
+type ByStatus = Record<StudentStatus, Student[]>;
+
+type LoadState =
+  | { status: 'loading' }
+  | { status: 'error'; message: string }
+  | { status: 'success'; byStatus: ByStatus };
 
 interface ConfirmState {
   type: 'activate' | 'deactivate' | 'delete';
@@ -19,27 +36,57 @@ interface ConfirmState {
 }
 
 export function StudentManagementScreen(): JSX.Element {
-  const [students, setStudents] = useState<Student[]>(MOCK_STUDENTS);
   const [activeTab, setActiveTab] = useState<StudentStatus>('active');
   const [search, setSearch] = useState('');
+  const [debouncedSearch, setDebouncedSearch] = useState('');
   const [selectedCourses, setSelectedCourses] = useState<string[]>([]);
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [editingStudent, setEditingStudent] = useState<Student | undefined>(undefined);
   const [confirmState, setConfirmState] = useState<ConfirmState | null>(null);
+  const [loadState, setLoadState] = useState<LoadState>({ status: 'loading' });
+  const [refreshKey, setRefreshKey] = useState(0);
+
+  // Debounce search so it doesn't refetch on every keystroke.
+  useEffect(() => {
+    const timeout = setTimeout(() => setDebouncedSearch(search), 300);
+    return () => clearTimeout(timeout);
+  }, [search]);
+
+  // Fetch all three statuses in parallel (same course/search filters) so tab
+  // counts stay accurate and switching tabs doesn't need a network round trip.
+  useEffect(() => {
+    let cancelled = false;
+    setLoadState({ status: 'loading' });
+
+    Promise.all(
+      ALL_STATUSES.map((status) =>
+        listStudents({ status, course: selectedCourses, search: debouncedSearch }).then(
+          (dtos) => [status, dtos.map(apiDtoToStudent)] as const,
+        ),
+      ),
+    )
+      .then((results) => {
+        if (cancelled) return;
+        const byStatus = Object.fromEntries(results) as ByStatus;
+        setLoadState({ status: 'success', byStatus });
+      })
+      .catch((error) => {
+        if (cancelled) return;
+        setLoadState({
+          status: 'error',
+          message: error instanceof ApiError ? error.message : 'Failed to load students.',
+        });
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [selectedCourses, debouncedSearch, refreshKey]);
 
   const countByStatus = (status: StudentStatus): number =>
-    students.filter((s) => s.status === status).length;
+    loadState.status === 'success' ? loadState.byStatus[status].length : 0;
 
-  const visibleStudents = students.filter((student) => {
-    if (student.status !== activeTab) return false;
-    if (selectedCourses.length > 0 && !selectedCourses.includes(student.course)) return false;
-    if (search.trim()) {
-      const query = search.trim().toLowerCase();
-      const fullName = `${student.firstName} ${student.lastName}`.toLowerCase();
-      if (!fullName.includes(query) && !student.email.toLowerCase().includes(query)) return false;
-    }
-    return true;
-  });
+  const visibleStudents = loadState.status === 'success' ? loadState.byStatus[activeTab] : [];
 
   const handleAddNew = (): void => {
     setEditingStudent(undefined);
@@ -51,23 +98,15 @@ export function StudentManagementScreen(): JSX.Element {
     setIsFormOpen(true);
   };
 
-  const handleFormSubmit = (values: StudentFormValues): void => {
+  const handleFormSubmit = async (values: StudentFormValues): Promise<void> => {
     if (editingStudent) {
-      setStudents((prev) =>
-        prev.map((s) => (s.id === editingStudent.id ? { ...s, ...values } : s)),
-      );
+      await updateStudent(editingStudent.id, formValuesToUpdatePayload(values));
       toast.success('Student updated');
     } else {
-      const newStudent: Student = {
-        id: crypto.randomUUID(),
-        studentId: generateNextStudentId(students),
-        ...values,
-        assignedOn: new Date().toISOString(),
-        status: 'active',
-      };
-      setStudents((prev) => [newStudent, ...prev]);
+      await createStudent(formValuesToCreatePayload(values));
       toast.success('Student added');
     }
+    setRefreshKey((key) => key + 1);
   };
 
   const handleDeactivateRequest = (student: Student): void => {
@@ -81,14 +120,24 @@ export function StudentManagementScreen(): JSX.Element {
     setConfirmState({ type: 'delete', student });
   };
 
+  // MOCK:API — no deactivate/delete endpoint exists on the backend yet, so
+  // this only moves the student between the locally-cached status lists.
+  // It will be overwritten by the next real refetch (e.g. after create/edit).
   const handleConfirm = (): void => {
-    if (!confirmState) return;
+    if (!confirmState || loadState.status !== 'success') return;
     const { type, student } = confirmState;
     const nextStatus: StudentStatus =
       type === 'delete' ? 'deleted' : type === 'activate' ? 'active' : 'deactivated';
-    setStudents((prev) =>
-      prev.map((s) => (s.id === student.id ? { ...s, status: nextStatus } : s)),
-    );
+
+    setLoadState({
+      status: 'success',
+      byStatus: {
+        ...loadState.byStatus,
+        [student.status]: loadState.byStatus[student.status].filter((s) => s.id !== student.id),
+        [nextStatus]: [{ ...student, status: nextStatus }, ...loadState.byStatus[nextStatus]],
+      },
+    });
+
     toast.success(
       type === 'delete'
         ? 'Student deleted'
@@ -138,18 +187,29 @@ export function StudentManagementScreen(): JSX.Element {
           </div>
         </div>
 
-        {STUDENT_STATUS_TABS.map((tab) => (
-          <TabsContent key={tab.value} value={tab.value}>
-            <div className="rounded-xl border border-border bg-card">
-              <StudentTable
-                students={visibleStudents}
-                onEdit={handleEdit}
-                onDeactivate={handleDeactivateRequest}
-                onDelete={handleDeleteRequest}
-              />
-            </div>
-          </TabsContent>
-        ))}
+        {loadState.status === 'error' ? (
+          <p className="mt-4 rounded-xl border border-destructive/20 bg-destructive/5 px-4 py-3 text-sm text-destructive">
+            {loadState.message}
+          </p>
+        ) : loadState.status === 'loading' ? (
+          <div className="mt-4 flex items-center justify-center gap-2 rounded-xl border border-border bg-card py-16 text-sm text-muted-foreground">
+            <Loader2 className="h-4 w-4 animate-spin" />
+            Loading students…
+          </div>
+        ) : (
+          STUDENT_STATUS_TABS.map((tab) => (
+            <TabsContent key={tab.value} value={tab.value}>
+              <div className="rounded-xl border border-border bg-card">
+                <StudentTable
+                  students={visibleStudents}
+                  onEdit={handleEdit}
+                  onDeactivate={handleDeactivateRequest}
+                  onDelete={handleDeleteRequest}
+                />
+              </div>
+            </TabsContent>
+          ))
+        )}
       </Tabs>
 
       <AddEditStudentDialog

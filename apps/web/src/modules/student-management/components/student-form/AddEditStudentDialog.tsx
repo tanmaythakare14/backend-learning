@@ -1,7 +1,8 @@
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import type { JSX } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
+import { Loader2 } from 'lucide-react';
 import {
   Dialog,
   DialogContent,
@@ -12,6 +13,7 @@ import {
 } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { PhoneNumberField } from '@/components/common/PhoneNumberField';
 import {
   Select,
   SelectTrigger,
@@ -27,6 +29,7 @@ import {
   FormLabel,
   FormMessage,
 } from '@/components/ui/form';
+import { ApiError } from '@/utils/apiError';
 import { COMPUTER_ENGINEERING_COURSES } from '../../constants';
 import type { AddEditStudentDialogProps } from '../../@types';
 import { studentFormSchema, type StudentFormSchemaValues } from './schema';
@@ -45,6 +48,8 @@ export function AddEditStudentDialog({
   student,
   onSubmit,
 }: AddEditStudentDialogProps): JSX.Element {
+  const [submitError, setSubmitError] = useState<string | null>(null);
+
   const form = useForm<StudentFormSchemaValues>({
     resolver: zodResolver(studentFormSchema),
     defaultValues: EMPTY_VALUES,
@@ -52,6 +57,7 @@ export function AddEditStudentDialog({
 
   useEffect(() => {
     if (open) {
+      setSubmitError(null);
       form.reset(
         student
           ? {
@@ -66,9 +72,20 @@ export function AddEditStudentDialog({
     }
   }, [open, student, form]);
 
-  const handleSubmit = (values: StudentFormSchemaValues): void => {
-    onSubmit(values);
-    onOpenChange(false);
+  const handleSubmit = async (values: StudentFormSchemaValues): Promise<void> => {
+    setSubmitError(null);
+    try {
+      await onSubmit(values);
+      onOpenChange(false);
+    } catch (error) {
+      if (error instanceof ApiError && error.status === 409) {
+        form.setError('email', { message: error.message });
+        return;
+      }
+      setSubmitError(
+        error instanceof ApiError ? error.message : 'Something went wrong. Please try again.',
+      );
+    }
   };
 
   return (
@@ -82,6 +99,12 @@ export function AddEditStudentDialog({
               : 'Enroll a new student and assign a course.'}
           </DialogDescription>
         </DialogHeader>
+
+        {submitError && (
+          <p className="mb-4 rounded-lg border border-destructive/20 bg-destructive/5 px-3.5 py-2.5 text-[13px] text-destructive">
+            {submitError}
+          </p>
+        )}
 
         <Form {...form}>
           <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-4">
@@ -143,7 +166,7 @@ export function AddEditStudentDialog({
                     Phone number <span className="text-destructive">*</span>
                   </FormLabel>
                   <FormControl>
-                    <Input type="tel" placeholder="(415) 555-0134" required {...field} />
+                    <PhoneNumberField required {...field} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -178,10 +201,18 @@ export function AddEditStudentDialog({
             />
 
             <DialogFooter>
-              <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => onOpenChange(false)}
+                disabled={form.formState.isSubmitting}
+              >
                 Cancel
               </Button>
-              <Button type="submit">{student ? 'Save changes' : 'Add student'}</Button>
+              <Button type="submit" disabled={form.formState.isSubmitting}>
+                {form.formState.isSubmitting && <Loader2 className="h-4 w-4 animate-spin" />}
+                {form.formState.isSubmitting ? 'Saving…' : student ? 'Save changes' : 'Add student'}
+              </Button>
             </DialogFooter>
           </form>
         </Form>

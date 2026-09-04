@@ -19,6 +19,18 @@ export interface UpdateStudentDto {
   course: string;
 }
 
+/**
+ * List query — all optional. `status` defaults to "active" (matches the
+ * frontend's default tab) if omitted. `course` accepts either a single
+ * course name, a comma-separated list, or repeated query params (Express's
+ * query parser turns `?course=A&course=B` into a real array already).
+ */
+export interface ListStudentsQuery {
+  status?: string;
+  course?: string | string[];
+  search?: string;
+}
+
 /** Output DTO — shape returned to the client. */
 export interface StudentOutDto {
   id: string;

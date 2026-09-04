@@ -4,7 +4,7 @@ export const studentFormSchema = z.object({
   firstName: z.string().min(1, 'First name is required'),
   lastName: z.string().min(1, 'Last name is required'),
   email: z.string().email('Enter a valid email address'),
-  phone: z.string().min(10, 'Enter a valid phone number'),
+  phone: z.string().regex(/^\(\d{3}\) \d{3}-\d{4}$/, 'Enter a valid US phone number'),
   course: z.string().min(1, 'Select a course'),
 });
 

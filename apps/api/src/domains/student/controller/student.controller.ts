@@ -1,4 +1,4 @@
-import { Controller, Post, Put, Param, Body, Res } from '@nestjs/common';
+import { Controller, Get, Post, Put, Param, Body, Query, Res } from '@nestjs/common';
 import {
   ApiTags,
   ApiOperation,
@@ -7,10 +7,11 @@ import {
   ApiConflictResponse,
   ApiBadRequestResponse,
   ApiNotFoundResponse,
+  ApiQuery,
 } from '@nestjs/swagger';
 import { Response } from 'express';
 import { StudentService } from '../service/student.service';
-import { CreateStudentDto, UpdateStudentDto } from '../dto/student.dto';
+import { CreateStudentDto, UpdateStudentDto, ListStudentsQuery } from '../dto/student.dto';
 import { HttpStatus } from '../../../common/constants/http-status.constants';
 import { SuccessMessages } from '../../../common/constants/success-messages.constants';
 import { generateResponse } from '../../../common/utils/response.util';
@@ -19,6 +20,26 @@ import { generateResponse } from '../../../common/utils/response.util';
 @Controller('students')
 export class StudentController {
   constructor(private readonly service: StudentService) {}
+
+  @Get()
+  @ApiOperation({ summary: 'List students, filterable by status/course/search' })
+  @ApiQuery({ name: 'status', required: false, enum: ['active', 'deactivated', 'deleted'] })
+  @ApiQuery({
+    name: 'course',
+    required: false,
+    description: 'Comma-separated course names, or repeat the param',
+  })
+  @ApiQuery({
+    name: 'search',
+    required: false,
+    description: 'Matches first name, last name, or email',
+  })
+  @ApiOkResponse({ description: 'List of students' })
+  @ApiBadRequestResponse({ description: 'Invalid status value' })
+  async findAll(@Query() query: ListStudentsQuery, @Res() res: Response): Promise<Response> {
+    const data = await this.service.findAll(query);
+    return generateResponse(res, { statusCode: HttpStatus.OK, data });
+  }
 
   @Post()
   @ApiOperation({ summary: 'Enroll a new student' })

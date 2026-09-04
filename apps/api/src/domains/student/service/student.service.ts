@@ -2,9 +2,21 @@ import { Injectable } from '@nestjs/common';
 import { StudentRepository } from '../repository/student.repository';
 import { LoggerService } from '../../../common/utils/logger.service';
 import { AuditLogger } from '../../../common/utils/audit-logger.service';
-import { ConflictException, NotFoundException } from '../../../common/exceptions';
-import { CreateStudentDto, UpdateStudentDto, StudentOutDto } from '../dto/student.dto';
-import { Student } from '../entities/student.entity';
+import {
+  BadRequestException,
+  ConflictException,
+  NotFoundException,
+} from '../../../common/exceptions';
+import { isValidUuid } from '../../../common/utils/uuid.util';
+import {
+  CreateStudentDto,
+  UpdateStudentDto,
+  ListStudentsQuery,
+  StudentOutDto,
+} from '../dto/student.dto';
+import { Student, StudentStatus } from '../entities/student.entity';
+
+const VALID_STATUSES: StudentStatus[] = ['active', 'deactivated', 'deleted'];
 
 @Injectable()
 export class StudentService {
@@ -13,6 +25,27 @@ export class StudentService {
     private readonly logger: LoggerService,
     private readonly audit: AuditLogger,
   ) {}
+
+  async findAll(query: ListStudentsQuery): Promise<StudentOutDto[]> {
+    const status = (query.status ?? 'active') as StudentStatus;
+    if (!VALID_STATUSES.includes(status)) {
+      throw new BadRequestException(
+        `"${status}" is not a valid status — use one of: ${VALID_STATUSES.join(', ')}`,
+      );
+    }
+
+    const courses = Array.isArray(query.course)
+      ? query.course
+      : query.course
+        ? query.course
+            .split(',')
+            .map((course) => course.trim())
+            .filter(Boolean)
+        : undefined;
+
+    const students = await this.repository.findMany({ status, courses, search: query.search });
+    return students.map((student) => this.toOutDto(student));
+  }
 
   async create(data: CreateStudentDto): Promise<StudentOutDto> {
     const email = data.email.trim().toLowerCase();
@@ -46,6 +79,12 @@ export class StudentService {
   }
 
   async update(id: string, data: UpdateStudentDto): Promise<StudentOutDto> {
+    if (!isValidUuid(id)) {
+      throw new BadRequestException(
+        `"${id}" is not a valid student id — use the "id" field from the create/update response (a UUID), not the human-readable "studentId" (e.g. STU-2401)`,
+      );
+    }
+
     this.audit.log('StudentService', 'Student update started', { studentId: id });
 
     const existing = await this.repository.findById(id);

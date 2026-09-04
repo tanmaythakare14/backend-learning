@@ -1,7 +1,13 @@
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Not, Repository } from 'typeorm';
-import { Student } from '../entities/student.entity';
+import { Student, StudentStatus } from '../entities/student.entity';
+
+interface FindManyFilters {
+  status: StudentStatus;
+  courses?: string[];
+  search?: string;
+}
 
 interface CreateStudentData {
   studentId: string;
@@ -34,6 +40,25 @@ export class StudentRepository {
 
   async findById(id: string): Promise<Student | null> {
     return this.repository.findOne({ where: { id, status: Not('deleted') } });
+  }
+
+  async findMany(filters: FindManyFilters): Promise<Student[]> {
+    const qb = this.repository
+      .createQueryBuilder('student')
+      .where('student.status = :status', { status: filters.status });
+
+    if (filters.courses && filters.courses.length > 0) {
+      qb.andWhere('student.course IN (:...courses)', { courses: filters.courses });
+    }
+
+    if (filters.search) {
+      qb.andWhere(
+        '(LOWER(student.first_name) LIKE :search OR LOWER(student.last_name) LIKE :search OR LOWER(student.email) LIKE :search)',
+        { search: `%${filters.search.toLowerCase()}%` },
+      );
+    }
+
+    return qb.orderBy('student.created_at', 'DESC').getMany();
   }
 
   /** Highest numeric suffix currently in use across student_id values (e.g. "STU-2415" -> 2415). */

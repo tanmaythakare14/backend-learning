@@ -2,7 +2,7 @@
   "info": {
     "_postman_id": "6e2b7b9a-6b2c-4b3e-9b0e-1a2b3c4d5e6f",
     "name": "Backend AI API",
-    "description": "Generated from the current apps/api NestJS backend. Global prefix is `/api/v1` (except `health`, which is *supposed* to be excluded but isn't — see the note on the Health Check request). Domains: `health-check`, `example` (generic CRUD reference template — real fields are literally `name`/`col1`/`col2`/`col3`), `auth` (real: `POST /auth/register`, `POST /auth/login`), and `student` (real: `POST /students`, `PUT /students/:id` — name is immutable on update, see the Update Student request's description).\n\nKnown bug (see CLAUDE.md): both `HealthCheckController` and `ExampleController` use bare `@Controller()` with argument-less `@Get()` handlers, so both resolve to `GET /api/v1`. Because `HealthCheckModule` is imported before `ExampleModule` in `app.module.ts`, the health check handler wins and `ExampleController.getAll` is currently unreachable through the HTTP layer.\n\nSeparate known issue: errors thrown inside a domain service (e.g. `auth`'s duplicate-email `ConflictException`) don't go through the documented Express-level `errorHandler` — Nest's own exception pipeline intercepts them first, so the response shape for those is `{statusCode, message}` (2 keys), not the `{status, message, error}` (3 keys) shape the rest of the API uses. Both are shown as example responses on the Register request below.",
+    "description": "Generated from the current apps/api NestJS backend. Global prefix is `/api/v1` (except `health`, which is *supposed* to be excluded but isn't — see the note on the Health Check request). Domains: `health-check`, `example` (generic CRUD reference template — real fields are literally `name`/`col1`/`col2`/`col3`), `auth` (real: `POST /auth/register`, `POST /auth/login`), and `student` (real: `GET /students` with status/course/search filters, `POST /students`, `PUT /students/:id` — name is immutable on update, see the Update Student request's description).\n\nKnown bug (see CLAUDE.md): both `HealthCheckController` and `ExampleController` use bare `@Controller()` with argument-less `@Get()` handlers, so both resolve to `GET /api/v1`. Because `HealthCheckModule` is imported before `ExampleModule` in `app.module.ts`, the health check handler wins and `ExampleController.getAll` is currently unreachable through the HTTP layer.\n\nSeparate known issue: errors thrown inside a domain service (e.g. `auth`'s duplicate-email `ConflictException`) don't go through the documented Express-level `errorHandler` — Nest's own exception pipeline intercepts them first, so the response shape for those is `{statusCode, message}` (2 keys), not the `{status, message, error}` (3 keys) shape the rest of the API uses. Both are shown as example responses on the Register request below.",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "auth": {
@@ -14,7 +14,7 @@
     { "key": "token", "value": "", "type": "string" },
     { "key": "exampleId", "value": "", "type": "string" },
     { "key": "registerEmail", "value": "ada@example.com", "type": "string" },
-    { "key": "studentId", "value": "", "type": "string" }
+    { "key": "studentDbId", "value": "", "type": "string" }
   ],
   "item": [
     {
@@ -186,8 +186,54 @@
     },
     {
       "name": "Students",
-      "description": "Real domain — apps/api/src/domains/student. Every field is required, matching the frontend Add Student form. `course` must be one of the fixed course list (apps/api/src/domains/student/constants/courses.constants.ts) or Joi rejects it with 400. Only create exists so far — no list/update/deactivate/delete endpoints yet.",
+      "description": "Real domain — apps/api/src/domains/student. Every field is required on create, matching the frontend Add Student form. `course` must be one of the fixed course list (apps/api/src/domains/student/constants/courses.constants.ts) or Joi rejects it with 400. No deactivate/delete endpoints yet.\n\nNote for List Students: its GET /students route only works because StudentModule is registered before ExampleModule in app.module.ts — ExampleController's bare @Controller() + @Get(':id') greedily matches ANY GET /api/v1/<one-segment> path, so it would otherwise swallow this request first (same root cause as the health/example collision CLAUDE.md documents). If a future domain's list route mysteriously 500s with a uuid-cast error, check module registration order before anything else.",
       "item": [
+        {
+          "name": "List Students",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/students?status=active&course=Web Development,Cloud Computing&search=",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "students"],
+              "query": [
+                { "key": "status", "value": "active", "description": "active | deactivated | deleted — defaults to active if omitted" },
+                { "key": "course", "value": "Web Development,Cloud Computing", "description": "Comma-separated course names, or repeat the param (?course=A&course=B)" },
+                { "key": "search", "value": "", "description": "Matches first name, last name, or email" }
+              ]
+            },
+            "description": "All three query params are optional and independent — combine any subset. Remove the ones you don't need from the Params tab rather than leaving them empty, since an empty search='' still runs (harmlessly matches everything)."
+          },
+          "response": [
+            {
+              "name": "200 OK",
+              "originalRequest": {
+                "method": "GET",
+                "header": [],
+                "url": { "raw": "{{baseUrl}}/api/v1/students?course=Web Development", "host": ["{{baseUrl}}"], "path": ["api", "v1", "students"], "query": [{ "key": "course", "value": "Web Development" }] }
+              },
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [{ "key": "Content-Type", "value": "application/json" }],
+              "body": "{\n  \"status\": 200,\n  \"data\": [\n    {\n      \"id\": \"def4d6d4-e324-414d-9026-ae058b92059a\",\n      \"studentId\": \"STU-2403\",\n      \"firstName\": \"Alice\",\n      \"lastName\": \"Web\",\n      \"email\": \"alice-web@example.com\",\n      \"phone\": \"5551110001\",\n      \"course\": \"Web Development\",\n      \"status\": \"active\",\n      \"assignedOn\": \"2026-09-03T05:51:55.857Z\",\n      \"createdAt\": \"2026-09-03T05:51:55.857Z\"\n    }\n  ]\n}"
+            },
+            {
+              "name": "400 Bad Request (invalid status)",
+              "originalRequest": {
+                "method": "GET",
+                "header": [],
+                "url": { "raw": "{{baseUrl}}/api/v1/students?status=bogus", "host": ["{{baseUrl}}"], "path": ["api", "v1", "students"], "query": [{ "key": "status", "value": "bogus" }] }
+              },
+              "status": "Bad Request",
+              "code": 400,
+              "_postman_previewlanguage": "json",
+              "header": [{ "key": "Content-Type", "value": "application/json" }],
+              "body": "{\n  \"statusCode\": 400,\n  \"message\": \"\\\"bogus\\\" is not a valid status — use one of: active, deactivated, deleted\"\n}"
+            }
+          ]
+        },
         {
           "name": "Create Student",
           "request": {
@@ -301,13 +347,34 @@
               "raw": "{\n  \"email\": \"marie.curie@example.com\",\n  \"phone\": \"5559998888\",\n  \"course\": \"Cloud Computing\"\n}"
             },
             "url": {
-              "raw": "{{baseUrl}}/api/v1/students/{{studentId}}",
+              "raw": "{{baseUrl}}/api/v1/students/{{studentDbId}}",
               "host": ["{{baseUrl}}"],
-              "path": ["api", "v1", "students", "{{studentId}}"]
+              "path": ["api", "v1", "students", "{{studentDbId}}"]
             },
-            "description": "firstName/lastName are deliberately not accepted here — a student's name is immutable after enrollment. Sending them anyway is silently ignored (validate() strips unknown keys before the controller ever sees them); this was verified directly, not just documented. Set the {{studentId}} collection variable to a real student's `id` (the UUID, not the human-readable STU-xxxx) from a Create Student response first."
+            "description": "IMPORTANT: {{studentDbId}} must be the `id` field (a UUID) from a Create/Update Student response — NOT the human-readable `studentId` (e.g. STU-2401). Sending the wrong one used to 500; it now 400s with a message telling you exactly this, see the example below.\n\nfirstName/lastName are deliberately not accepted here — a student's name is immutable after enrollment. Sending them anyway is silently ignored (validate() strips unknown keys before the controller ever sees them); this was verified directly, not just documented."
           },
           "response": [
+            {
+              "name": "400 Bad Request (sent the human-readable studentId instead of the id UUID)",
+              "originalRequest": {
+                "method": "PUT",
+                "header": [{ "key": "Content-Type", "value": "application/json" }],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"email\": \"marie.curie@example.com\",\n  \"phone\": \"5559998888\",\n  \"course\": \"Cloud Computing\"\n}"
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/students/STU-2401",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["api", "v1", "students", "STU-2401"]
+                }
+              },
+              "status": "Bad Request",
+              "code": 400,
+              "_postman_previewlanguage": "json",
+              "header": [{ "key": "Content-Type", "value": "application/json" }],
+              "body": "{\n  \"statusCode\": 400,\n  \"message\": \"\\\"STU-2401\\\" is not a valid student id — use the \\\"id\\\" field from the create/update response (a UUID), not the human-readable \\\"studentId\\\" (e.g. STU-2401)\"\n}"
+            },
             {
               "name": "200 OK",
               "originalRequest": {
@@ -318,9 +385,9 @@
                   "raw": "{\n  \"email\": \"edit-test-updated@example.com\",\n  \"phone\": \"5559998888\",\n  \"course\": \"Cloud Computing\"\n}"
                 },
                 "url": {
-                  "raw": "{{baseUrl}}/api/v1/students/{{studentId}}",
+                  "raw": "{{baseUrl}}/api/v1/students/{{studentDbId}}",
                   "host": ["{{baseUrl}}"],
-                  "path": ["api", "v1", "students", "{{studentId}}"]
+                  "path": ["api", "v1", "students", "{{studentDbId}}"]
                 }
               },
               "status": "OK",
@@ -360,9 +427,9 @@
                   "raw": "{\n  \"email\": \"other-student@example.com\",\n  \"phone\": \"5559998888\",\n  \"course\": \"Cloud Computing\"\n}"
                 },
                 "url": {
-                  "raw": "{{baseUrl}}/api/v1/students/{{studentId}}",
+                  "raw": "{{baseUrl}}/api/v1/students/{{studentDbId}}",
                   "host": ["{{baseUrl}}"],
-                  "path": ["api", "v1", "students", "{{studentId}}"]
+                  "path": ["api", "v1", "students", "{{studentDbId}}"]
                 }
               },
               "status": "Conflict",

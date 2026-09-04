@@ -33,7 +33,7 @@ export const SelectContent = React.forwardRef<
   React.ComponentPropsWithoutRef<typeof BaseSelect.Popup>
 >(({ className, ...props }, ref) => (
   <BaseSelect.Portal>
-    <BaseSelect.Positioner sideOffset={6} className="z-50">
+    <BaseSelect.Positioner sideOffset={8} alignItemWithTrigger={false} className="z-50">
       <BaseSelect.Popup
         ref={ref}
         className={cn(
