@@ -5,9 +5,8 @@ import { toast } from 'sonner';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
-import { ConfirmDialog } from '@/components/common/ConfirmDialog';
 import { ApiError } from '@/utils/apiError';
-import { STUDENT_STATUS_TABS } from '../constants';
+import { ALL_STUDENT_STATUSES, STUDENT_STATUS_TABS } from '../constants';
 import type { Student, StudentStatus, StudentFormValues } from '../@types';
 import { StudentTable } from './student-table';
 import { CourseFilterPopover } from './course-filter';
@@ -16,12 +15,12 @@ import {
   listStudents,
   createStudent,
   updateStudent,
+  updateStudentStatus,
+  deleteStudent,
   apiDtoToStudent,
   formValuesToCreatePayload,
   formValuesToUpdatePayload,
 } from '../service';
-
-const ALL_STATUSES: StudentStatus[] = ['active', 'deactivated', 'deleted'];
 
 type ByStatus = Record<StudentStatus, Student[]>;
 
@@ -30,11 +29,6 @@ type LoadState =
   | { status: 'error'; message: string }
   | { status: 'success'; byStatus: ByStatus };
 
-interface ConfirmState {
-  type: 'activate' | 'deactivate' | 'delete';
-  student: Student;
-}
-
 export function StudentManagementScreen(): JSX.Element {
   const [activeTab, setActiveTab] = useState<StudentStatus>('active');
   const [search, setSearch] = useState('');
@@ -42,7 +36,6 @@ export function StudentManagementScreen(): JSX.Element {
   const [selectedCourses, setSelectedCourses] = useState<string[]>([]);
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [editingStudent, setEditingStudent] = useState<Student | undefined>(undefined);
-  const [confirmState, setConfirmState] = useState<ConfirmState | null>(null);
   const [loadState, setLoadState] = useState<LoadState>({ status: 'loading' });
   const [refreshKey, setRefreshKey] = useState(0);
 
@@ -59,7 +52,7 @@ export function StudentManagementScreen(): JSX.Element {
     setLoadState({ status: 'loading' });
 
     Promise.all(
-      ALL_STATUSES.map((status) =>
+      ALL_STUDENT_STATUSES.map((status) =>
         listStudents({ status, course: selectedCourses, search: debouncedSearch }).then(
           (dtos) => [status, dtos.map(apiDtoToStudent)] as const,
         ),
@@ -109,42 +102,29 @@ export function StudentManagementScreen(): JSX.Element {
     setRefreshKey((key) => key + 1);
   };
 
-  const handleDeactivateRequest = (student: Student): void => {
-    setConfirmState({
-      type: student.status === 'deactivated' ? 'activate' : 'deactivate',
-      student,
-    });
+  const handleDeactivateToggle = async (student: Student): Promise<void> => {
+    const nextStatus: StudentStatus = student.status === 'deactivated' ? 'active' : 'deactivated';
+    try {
+      await updateStudentStatus(student.id, nextStatus);
+      toast.success(nextStatus === 'active' ? 'Student activated' : 'Student deactivated');
+      setRefreshKey((key) => key + 1);
+    } catch (error) {
+      toast.error(
+        error instanceof ApiError ? error.message : 'Something went wrong. Please try again.',
+      );
+    }
   };
 
-  const handleDeleteRequest = (student: Student): void => {
-    setConfirmState({ type: 'delete', student });
-  };
-
-  // MOCK:API — no deactivate/delete endpoint exists on the backend yet, so
-  // this only moves the student between the locally-cached status lists.
-  // It will be overwritten by the next real refetch (e.g. after create/edit).
-  const handleConfirm = (): void => {
-    if (!confirmState || loadState.status !== 'success') return;
-    const { type, student } = confirmState;
-    const nextStatus: StudentStatus =
-      type === 'delete' ? 'deleted' : type === 'activate' ? 'active' : 'deactivated';
-
-    setLoadState({
-      status: 'success',
-      byStatus: {
-        ...loadState.byStatus,
-        [student.status]: loadState.byStatus[student.status].filter((s) => s.id !== student.id),
-        [nextStatus]: [{ ...student, status: nextStatus }, ...loadState.byStatus[nextStatus]],
-      },
-    });
-
-    toast.success(
-      type === 'delete'
-        ? 'Student deleted'
-        : type === 'activate'
-          ? 'Student activated'
-          : 'Student deactivated',
-    );
+  const handleDelete = async (student: Student): Promise<void> => {
+    try {
+      await deleteStudent(student.id);
+      toast.success('Student deleted');
+      setRefreshKey((key) => key + 1);
+    } catch (error) {
+      toast.error(
+        error instanceof ApiError ? error.message : 'Something went wrong. Please try again.',
+      );
+    }
   };
 
   return (
@@ -180,7 +160,7 @@ export function StudentManagementScreen(): JSX.Element {
                 className="h-10 w-72 pl-9"
               />
             </div>
-            <Button onClick={handleAddNew} className="gap-2 rounded-full">
+            <Button onClick={handleAddNew} className="h-10 gap-2">
               <UserPlus className="h-4 w-4" />
               Add New Student
             </Button>
@@ -203,8 +183,8 @@ export function StudentManagementScreen(): JSX.Element {
                 <StudentTable
                   students={visibleStudents}
                   onEdit={handleEdit}
-                  onDeactivate={handleDeactivateRequest}
-                  onDelete={handleDeleteRequest}
+                  onDeactivate={handleDeactivateToggle}
+                  onDelete={handleDelete}
                 />
               </div>
             </TabsContent>
@@ -218,30 +198,6 @@ export function StudentManagementScreen(): JSX.Element {
         student={editingStudent}
         onSubmit={handleFormSubmit}
       />
-
-      {confirmState && (
-        <ConfirmDialog
-          open={!!confirmState}
-          onOpenChange={(open) => !open && setConfirmState(null)}
-          title={
-            confirmState.type === 'delete'
-              ? 'Delete student?'
-              : confirmState.type === 'activate'
-                ? 'Activate student?'
-                : 'Deactivate student?'
-          }
-          description={`This will ${confirmState.type} ${confirmState.student.firstName} ${confirmState.student.lastName}'s record.`}
-          confirmLabel={
-            confirmState.type === 'delete'
-              ? 'Delete'
-              : confirmState.type === 'activate'
-                ? 'Activate'
-                : 'Deactivate'
-          }
-          destructive={confirmState.type === 'delete'}
-          onConfirm={handleConfirm}
-        />
-      )}
     </div>
   );
 }

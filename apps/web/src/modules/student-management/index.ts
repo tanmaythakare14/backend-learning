@@ -1,1 +1,1 @@
-export { StudentManagementScreen } from './components';
+export { StudentManagementScreen, StudentDetailScreen } from './components';

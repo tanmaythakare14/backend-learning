@@ -29,6 +29,19 @@ export async function listStudents(params: ListStudentsParams): Promise<StudentA
   return (body as { data: StudentApiDto[] }).data;
 }
 
+export async function getStudent(id: string): Promise<StudentApiDto> {
+  const res = await fetch(`${config.apiUrl}/api/v1/students/${id}`);
+  const body: { data?: StudentApiDto; message?: string } | undefined = await res
+    .json()
+    .catch(() => undefined);
+
+  if (!res.ok) {
+    handleHttpError(res.status, body);
+  }
+
+  return (body as { data: StudentApiDto }).data;
+}
+
 export async function createStudent(payload: CreateStudentPayload): Promise<StudentApiDto> {
   const res = await fetch(`${config.apiUrl}/api/v1/students`, {
     method: 'POST',
@@ -56,6 +69,41 @@ export async function updateStudent(
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(payload),
   });
+
+  const body: { data?: StudentApiDto; message?: string } | undefined = await res
+    .json()
+    .catch(() => undefined);
+
+  if (!res.ok) {
+    handleHttpError(res.status, body);
+  }
+
+  return (body as { data: StudentApiDto }).data;
+}
+
+export async function updateStudentStatus(
+  id: string,
+  status: 'active' | 'deactivated',
+): Promise<StudentApiDto> {
+  const res = await fetch(`${config.apiUrl}/api/v1/students/${id}/status`, {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ status }),
+  });
+
+  const body: { data?: StudentApiDto; message?: string } | undefined = await res
+    .json()
+    .catch(() => undefined);
+
+  if (!res.ok) {
+    handleHttpError(res.status, body);
+  }
+
+  return (body as { data: StudentApiDto }).data;
+}
+
+export async function deleteStudent(id: string): Promise<StudentApiDto> {
+  const res = await fetch(`${config.apiUrl}/api/v1/students/${id}`, { method: 'DELETE' });
 
   const body: { data?: StudentApiDto; message?: string } | undefined = await res
     .json()

@@ -25,6 +25,21 @@ export class Student {
   @Column({ type: 'varchar', length: 255 })
   course!: string;
 
+  @Column({ type: 'varchar', length: 255, name: 'street_address', nullable: true })
+  streetAddress!: string | null;
+
+  @Column({ type: 'varchar', length: 255, nullable: true })
+  city!: string | null;
+
+  @Column({ type: 'varchar', length: 255, nullable: true })
+  state!: string | null;
+
+  @Column({ type: 'varchar', length: 20, name: 'zip_code', nullable: true })
+  zipCode!: string | null;
+
+  @Column({ type: 'varchar', length: 255, nullable: true })
+  country!: string | null;
+
   @Column({ type: 'varchar', length: 20, default: 'active' })
   status!: StudentStatus;
 

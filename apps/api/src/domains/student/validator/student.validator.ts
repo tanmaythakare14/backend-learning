@@ -1,6 +1,14 @@
 import Joi from 'joi';
 import { COMPUTER_ENGINEERING_COURSES } from '../constants/courses.constants';
 
+const addressFields = {
+  streetAddress: Joi.string().min(1).required(),
+  city: Joi.string().min(1).required(),
+  state: Joi.string().min(1).required(),
+  zipCode: Joi.string().min(1).required(),
+  country: Joi.string().min(1).required(),
+};
+
 export const createStudentSchema = Joi.object({
   firstName: Joi.string().min(1).required(),
   lastName: Joi.string().min(1).required(),
@@ -9,6 +17,7 @@ export const createStudentSchema = Joi.object({
   course: Joi.string()
     .valid(...COMPUTER_ENGINEERING_COURSES)
     .required(),
+  ...addressFields,
 });
 
 /**
@@ -22,4 +31,10 @@ export const updateStudentSchema = Joi.object({
   course: Joi.string()
     .valid(...COMPUTER_ENGINEERING_COURSES)
     .required(),
+  ...addressFields,
+});
+
+/** `deleted` is deliberately not a valid value here — DELETE /students/:id handles that transition. */
+export const updateStudentStatusSchema = Joi.object({
+  status: Joi.string().valid('active', 'deactivated').required(),
 });

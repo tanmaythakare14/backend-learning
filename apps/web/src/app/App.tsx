@@ -1,7 +1,8 @@
 import { Navigate, Route, Routes } from 'react-router-dom';
 import type { JSX, ReactNode } from 'react';
 import { CreateAccountScreen, SignInScreen } from '../modules/onboarding';
-import { StudentManagementScreen } from '../modules/student-management';
+import { StudentManagementScreen, StudentDetailScreen } from '../modules/student-management';
+import { MessageScreen } from '../modules/message';
 import { AppShell } from '../components/layouts';
 import { Toaster } from '../components/ui/sonner';
 import { ProtectedRoute } from '../components/ProtectedRoute';
@@ -53,7 +54,22 @@ function App() {
               </AuthenticatedShell>
             }
           />
-          <Route path="/messages" element={<PlaceholderPage title="Message" />} />
+          <Route
+            path="/students/:id"
+            element={
+              <AuthenticatedShell>
+                <StudentDetailScreen />
+              </AuthenticatedShell>
+            }
+          />
+          <Route
+            path="/messages"
+            element={
+              <AuthenticatedShell>
+                <MessageScreen />
+              </AuthenticatedShell>
+            }
+          />
           <Route path="/teachers" element={<PlaceholderPage title="Teachers" />} />
           <Route path="/settings" element={<PlaceholderPage title="Settings" />} />
         </Route>

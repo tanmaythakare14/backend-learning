@@ -16,12 +16,22 @@ interface CreateStudentData {
   email: string;
   phone: string;
   course: string;
+  streetAddress: string;
+  city: string;
+  state: string;
+  zipCode: string;
+  country: string;
 }
 
 interface UpdateStudentData {
   email: string;
   phone: string;
   course: string;
+  streetAddress: string;
+  city: string;
+  state: string;
+  zipCode: string;
+  country: string;
 }
 
 @Injectable()
@@ -40,6 +50,11 @@ export class StudentRepository {
 
   async findById(id: string): Promise<Student | null> {
     return this.repository.findOne({ where: { id, status: Not('deleted') } });
+  }
+
+  /** Unlike findById(), includes deleted students — the detail screen can view any status. */
+  async findByIdAnyStatus(id: string): Promise<Student | null> {
+    return this.repository.findOne({ where: { id } });
   }
 
   async findMany(filters: FindManyFilters): Promise<Student[]> {
@@ -78,5 +93,11 @@ export class StudentRepository {
   async update(id: string, data: UpdateStudentData): Promise<Student | null> {
     await this.repository.update(id, { ...data, updatedAt: new Date() });
     return this.findById(id);
+  }
+
+  /** Shared by activate/deactivate (StudentStatus 'active'|'deactivated') and soft-delete ('deleted'). */
+  async updateStatus(id: string, status: StudentStatus): Promise<Student | null> {
+    await this.repository.update(id, { status, updatedAt: new Date() });
+    return this.findByIdAnyStatus(id);
   }
 }

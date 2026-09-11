@@ -186,7 +186,7 @@
     },
     {
       "name": "Students",
-      "description": "Real domain — apps/api/src/domains/student. Every field is required on create, matching the frontend Add Student form. `course` must be one of the fixed course list (apps/api/src/domains/student/constants/courses.constants.ts) or Joi rejects it with 400. No deactivate/delete endpoints yet.\n\nNote for List Students: its GET /students route only works because StudentModule is registered before ExampleModule in app.module.ts — ExampleController's bare @Controller() + @Get(':id') greedily matches ANY GET /api/v1/<one-segment> path, so it would otherwise swallow this request first (same root cause as the health/example collision CLAUDE.md documents). If a future domain's list route mysteriously 500s with a uuid-cast error, check module registration order before anything else.",
+      "description": "Real domain — apps/api/src/domains/student. Every field is required on create, matching the frontend Add Student form. `course` must be one of the fixed course list (apps/api/src/domains/student/constants/courses.constants.ts) or Joi rejects it with 400. Deactivate/activate is `PATCH /students/:id/status` (body `{status: 'active'|'deactivated'}`); delete is a soft-delete via `DELETE /students/:id` (sets status to 'deleted', row stays queryable). Both 404 on an id that's already `deleted` — their existence check deliberately excludes deleted students, same as PUT.\n\nNote for List Students / Get Student by ID: these routes only work because StudentModule is registered before ExampleModule in app.module.ts — ExampleController's bare @Controller() + @Get(':id') greedily matches ANY GET /api/v1/<one-segment> path, so it would otherwise swallow the list request first (same root cause as the health/example collision CLAUDE.md documents). Get Student by ID isn't affected by that collision itself (its path has two segments, `/students/:id`), but it depends on the same registration order to reach StudentController at all. If a future domain's route mysteriously 500s with a uuid-cast error, check module registration order before anything else.",
       "item": [
         {
           "name": "List Students",
@@ -257,13 +257,79 @@
           ]
         },
         {
+          "name": "Get Student by ID",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/students/{{studentDbId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "students", "{{studentDbId}}"]
+            },
+            "description": "{{studentDbId}} must be the `id` field (a UUID) from a Create/Update/List response — NOT the human-readable `studentId` (e.g. STU-2401). Unlike the other student routes, this one returns a student of ANY status, including `deleted` — the detail screen needs to be able to show a deleted student's record, not just active/deactivated ones."
+          },
+          "response": [
+            {
+              "name": "200 OK",
+              "originalRequest": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/students/{{studentDbId}}",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["api", "v1", "students", "{{studentDbId}}"]
+                }
+              },
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [{ "key": "Content-Type", "value": "application/json" }],
+              "body": "{\n  \"status\": 200,\n  \"data\": {\n    \"id\": \"9cdd1f20-c30c-4dac-a858-0caa543bb538\",\n    \"studentId\": \"STU-2401\",\n    \"firstName\": \"Marie\",\n    \"lastName\": \"Curie\",\n    \"email\": \"marie.curie@example.com\",\n    \"phone\": \"(555) 555-0100\",\n    \"course\": \"Cybersecurity Fundamentals\",\n    \"streetAddress\": \"221B Baker Street\",\n    \"city\": \"San Francisco\",\n    \"state\": \"California\",\n    \"zipCode\": \"94107\",\n    \"country\": \"United States\",\n    \"status\": \"active\",\n    \"assignedOn\": \"2026-09-02T12:19:03.576Z\",\n    \"createdAt\": \"2026-09-02T12:19:03.576Z\"\n  }\n}"
+            },
+            {
+              "name": "400 Bad Request (sent the human-readable studentId instead of the id UUID)",
+              "originalRequest": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/students/STU-2401",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["api", "v1", "students", "STU-2401"]
+                }
+              },
+              "status": "Bad Request",
+              "code": 400,
+              "_postman_previewlanguage": "json",
+              "header": [{ "key": "Content-Type", "value": "application/json" }],
+              "body": "{\n  \"statusCode\": 400,\n  \"message\": \"\\\"STU-2401\\\" is not a valid student id — use the \\\"id\\\" field from the create/update response (a UUID), not the human-readable \\\"studentId\\\" (e.g. STU-2401)\"\n}"
+            },
+            {
+              "name": "404 Not Found",
+              "originalRequest": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/students/00000000-0000-0000-0000-000000000000",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["api", "v1", "students", "00000000-0000-0000-0000-000000000000"]
+                }
+              },
+              "status": "Not Found",
+              "code": 404,
+              "_postman_previewlanguage": "json",
+              "header": [{ "key": "Content-Type", "value": "application/json" }],
+              "body": "{\n  \"statusCode\": 404,\n  \"message\": \"Student with ID 00000000-0000-0000-0000-000000000000 not found\"\n}"
+            }
+          ]
+        },
+        {
           "name": "Create Student",
           "request": {
             "method": "POST",
             "header": [{ "key": "Content-Type", "value": "application/json" }],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"firstName\": \"Marie\",\n  \"lastName\": \"Curie\",\n  \"email\": \"marie.curie@example.com\",\n  \"phone\": \"(555) 555-0100\",\n  \"course\": \"Cybersecurity Fundamentals\"\n}"
+              "raw": "{\n  \"firstName\": \"Marie\",\n  \"lastName\": \"Curie\",\n  \"email\": \"marie.curie@example.com\",\n  \"phone\": \"(555) 555-0100\",\n  \"course\": \"Cybersecurity Fundamentals\",\n  \"streetAddress\": \"221B Baker Street\",\n  \"city\": \"San Francisco\",\n  \"state\": \"California\",\n  \"zipCode\": \"94107\",\n  \"country\": \"United States\"\n}"
             },
             "url": {
               "raw": "{{baseUrl}}/api/v1/students",
@@ -280,7 +346,7 @@
                 "header": [{ "key": "Content-Type", "value": "application/json" }],
                 "body": {
                   "mode": "raw",
-                  "raw": "{\n  \"firstName\": \"Marie\",\n  \"lastName\": \"Curie\",\n  \"email\": \"marie.curie@example.com\",\n  \"phone\": \"(555) 555-0100\",\n  \"course\": \"Cybersecurity Fundamentals\"\n}"
+                  "raw": "{\n  \"firstName\": \"Marie\",\n  \"lastName\": \"Curie\",\n  \"email\": \"marie.curie@example.com\",\n  \"phone\": \"(555) 555-0100\",\n  \"course\": \"Cybersecurity Fundamentals\",\n  \"streetAddress\": \"221B Baker Street\",\n  \"city\": \"San Francisco\",\n  \"state\": \"California\",\n  \"zipCode\": \"94107\",\n  \"country\": \"United States\"\n}"
                 },
                 "url": {
                   "raw": "{{baseUrl}}/api/v1/students",
@@ -292,7 +358,7 @@
               "code": 201,
               "_postman_previewlanguage": "json",
               "header": [{ "key": "Content-Type", "value": "application/json" }],
-              "body": "{\n  \"status\": 201,\n  \"message\": \"Created successfully\",\n  \"data\": {\n    \"id\": \"9cdd1f20-c30c-4dac-a858-0caa543bb538\",\n    \"studentId\": \"STU-2401\",\n    \"firstName\": \"Marie\",\n    \"lastName\": \"Curie\",\n    \"email\": \"marie.curie@example.com\",\n    \"phone\": \"(555) 555-0100\",\n    \"course\": \"Cybersecurity Fundamentals\",\n    \"status\": \"active\",\n    \"assignedOn\": \"2026-09-02T12:19:03.576Z\",\n    \"createdAt\": \"2026-09-02T12:19:03.576Z\"\n  }\n}"
+              "body": "{\n  \"status\": 201,\n  \"message\": \"Created successfully\",\n  \"data\": {\n    \"id\": \"9cdd1f20-c30c-4dac-a858-0caa543bb538\",\n    \"studentId\": \"STU-2401\",\n    \"firstName\": \"Marie\",\n    \"lastName\": \"Curie\",\n    \"email\": \"marie.curie@example.com\",\n    \"phone\": \"(555) 555-0100\",\n    \"course\": \"Cybersecurity Fundamentals\",\n    \"streetAddress\": \"221B Baker Street\",\n    \"city\": \"San Francisco\",\n    \"state\": \"California\",\n    \"zipCode\": \"94107\",\n    \"country\": \"United States\",\n    \"status\": \"active\",\n    \"assignedOn\": \"2026-09-02T12:19:03.576Z\",\n    \"createdAt\": \"2026-09-02T12:19:03.576Z\"\n  }\n}"
             },
             {
               "name": "409 Conflict (duplicate email)",
@@ -301,7 +367,7 @@
                 "header": [{ "key": "Content-Type", "value": "application/json" }],
                 "body": {
                   "mode": "raw",
-                  "raw": "{\n  \"firstName\": \"Marie\",\n  \"lastName\": \"Curie\",\n  \"email\": \"marie.curie@example.com\",\n  \"phone\": \"(555) 555-0100\",\n  \"course\": \"Cybersecurity Fundamentals\"\n}"
+                  "raw": "{\n  \"firstName\": \"Marie\",\n  \"lastName\": \"Curie\",\n  \"email\": \"marie.curie@example.com\",\n  \"phone\": \"(555) 555-0100\",\n  \"course\": \"Cybersecurity Fundamentals\",\n  \"streetAddress\": \"221B Baker Street\",\n  \"city\": \"San Francisco\",\n  \"state\": \"California\",\n  \"zipCode\": \"94107\",\n  \"country\": \"United States\"\n}"
                 },
                 "url": {
                   "raw": "{{baseUrl}}/api/v1/students",
@@ -322,7 +388,7 @@
                 "header": [{ "key": "Content-Type", "value": "application/json" }],
                 "body": {
                   "mode": "raw",
-                  "raw": "{\n  \"firstName\": \"Ada\",\n  \"lastName\": \"Lovelace\",\n  \"email\": \"ada2@example.com\",\n  \"course\": \"Web Development\"\n}"
+                  "raw": "{\n  \"firstName\": \"Ada\",\n  \"lastName\": \"Lovelace\",\n  \"email\": \"ada2@example.com\",\n  \"course\": \"Web Development\",\n  \"streetAddress\": \"123 Main St\",\n  \"city\": \"San Francisco\",\n  \"state\": \"California\",\n  \"zipCode\": \"94107\",\n  \"country\": \"United States\"\n}"
                 },
                 "url": {
                   "raw": "{{baseUrl}}/api/v1/students",
@@ -343,7 +409,7 @@
                 "header": [{ "key": "Content-Type", "value": "application/json" }],
                 "body": {
                   "mode": "raw",
-                  "raw": "{\n  \"firstName\": \"Ada\",\n  \"lastName\": \"Lovelace\",\n  \"email\": \"ada3@example.com\",\n  \"phone\": \"5551234567\",\n  \"course\": \"Underwater Basket Weaving\"\n}"
+                  "raw": "{\n  \"firstName\": \"Ada\",\n  \"lastName\": \"Lovelace\",\n  \"email\": \"ada3@example.com\",\n  \"phone\": \"5551234567\",\n  \"course\": \"Underwater Basket Weaving\",\n  \"streetAddress\": \"123 Main St\",\n  \"city\": \"San Francisco\",\n  \"state\": \"California\",\n  \"zipCode\": \"94107\",\n  \"country\": \"United States\"\n}"
                 },
                 "url": {
                   "raw": "{{baseUrl}}/api/v1/students",
@@ -366,7 +432,7 @@
             "header": [{ "key": "Content-Type", "value": "application/json" }],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"email\": \"marie.curie@example.com\",\n  \"phone\": \"5559998888\",\n  \"course\": \"Cloud Computing\"\n}"
+              "raw": "{\n  \"email\": \"marie.curie@example.com\",\n  \"phone\": \"5559998888\",\n  \"course\": \"Cloud Computing\",\n  \"streetAddress\": \"221B Baker Street\",\n  \"city\": \"San Francisco\",\n  \"state\": \"California\",\n  \"zipCode\": \"94107\",\n  \"country\": \"United States\"\n}"
             },
             "url": {
               "raw": "{{baseUrl}}/api/v1/students/{{studentDbId}}",
@@ -383,7 +449,7 @@
                 "header": [{ "key": "Content-Type", "value": "application/json" }],
                 "body": {
                   "mode": "raw",
-                  "raw": "{\n  \"email\": \"marie.curie@example.com\",\n  \"phone\": \"5559998888\",\n  \"course\": \"Cloud Computing\"\n}"
+                  "raw": "{\n  \"email\": \"marie.curie@example.com\",\n  \"phone\": \"5559998888\",\n  \"course\": \"Cloud Computing\",\n  \"streetAddress\": \"221B Baker Street\",\n  \"city\": \"San Francisco\",\n  \"state\": \"California\",\n  \"zipCode\": \"94107\",\n  \"country\": \"United States\"\n}"
                 },
                 "url": {
                   "raw": "{{baseUrl}}/api/v1/students/STU-2401",
@@ -404,7 +470,7 @@
                 "header": [{ "key": "Content-Type", "value": "application/json" }],
                 "body": {
                   "mode": "raw",
-                  "raw": "{\n  \"email\": \"edit-test-updated@example.com\",\n  \"phone\": \"5559998888\",\n  \"course\": \"Cloud Computing\"\n}"
+                  "raw": "{\n  \"email\": \"edit-test-updated@example.com\",\n  \"phone\": \"5559998888\",\n  \"course\": \"Cloud Computing\",\n  \"streetAddress\": \"221B Baker Street\",\n  \"city\": \"San Francisco\",\n  \"state\": \"California\",\n  \"zipCode\": \"94107\",\n  \"country\": \"United States\"\n}"
                 },
                 "url": {
                   "raw": "{{baseUrl}}/api/v1/students/{{studentDbId}}",
@@ -416,7 +482,7 @@
               "code": 200,
               "_postman_previewlanguage": "json",
               "header": [{ "key": "Content-Type", "value": "application/json" }],
-              "body": "{\n  \"status\": 200,\n  \"message\": \"Updated successfully\",\n  \"data\": {\n    \"id\": \"1df82c3e-4965-4383-b459-9309898e9030\",\n    \"studentId\": \"STU-2402\",\n    \"firstName\": \"Edit\",\n    \"lastName\": \"Test\",\n    \"email\": \"edit-test-updated@example.com\",\n    \"phone\": \"5559998888\",\n    \"course\": \"Cloud Computing\",\n    \"status\": \"active\",\n    \"assignedOn\": \"2026-09-02T12:44:48.701Z\",\n    \"createdAt\": \"2026-09-02T12:44:48.701Z\"\n  }\n}"
+              "body": "{\n  \"status\": 200,\n  \"message\": \"Updated successfully\",\n  \"data\": {\n    \"id\": \"1df82c3e-4965-4383-b459-9309898e9030\",\n    \"studentId\": \"STU-2402\",\n    \"firstName\": \"Edit\",\n    \"lastName\": \"Test\",\n    \"email\": \"edit-test-updated@example.com\",\n    \"phone\": \"5559998888\",\n    \"course\": \"Cloud Computing\",\n    \"streetAddress\": \"221B Baker Street\",\n    \"city\": \"San Francisco\",\n    \"state\": \"California\",\n    \"zipCode\": \"94107\",\n    \"country\": \"United States\",\n    \"status\": \"active\",\n    \"assignedOn\": \"2026-09-02T12:44:48.701Z\",\n    \"createdAt\": \"2026-09-02T12:44:48.701Z\"\n  }\n}"
             },
             {
               "name": "404 Not Found",
@@ -425,7 +491,7 @@
                 "header": [{ "key": "Content-Type", "value": "application/json" }],
                 "body": {
                   "mode": "raw",
-                  "raw": "{\n  \"email\": \"nobody@example.com\",\n  \"phone\": \"5551112222\",\n  \"course\": \"Cloud Computing\"\n}"
+                  "raw": "{\n  \"email\": \"nobody@example.com\",\n  \"phone\": \"5551112222\",\n  \"course\": \"Cloud Computing\",\n  \"streetAddress\": \"221B Baker Street\",\n  \"city\": \"San Francisco\",\n  \"state\": \"California\",\n  \"zipCode\": \"94107\",\n  \"country\": \"United States\"\n}"
                 },
                 "url": {
                   "raw": "{{baseUrl}}/api/v1/students/00000000-0000-0000-0000-000000000000",
@@ -446,7 +512,7 @@
                 "header": [{ "key": "Content-Type", "value": "application/json" }],
                 "body": {
                   "mode": "raw",
-                  "raw": "{\n  \"email\": \"other-student@example.com\",\n  \"phone\": \"5559998888\",\n  \"course\": \"Cloud Computing\"\n}"
+                  "raw": "{\n  \"email\": \"other-student@example.com\",\n  \"phone\": \"5559998888\",\n  \"course\": \"Cloud Computing\",\n  \"streetAddress\": \"221B Baker Street\",\n  \"city\": \"San Francisco\",\n  \"state\": \"California\",\n  \"zipCode\": \"94107\",\n  \"country\": \"United States\"\n}"
                 },
                 "url": {
                   "raw": "{{baseUrl}}/api/v1/students/{{studentDbId}}",
@@ -459,6 +525,134 @@
               "_postman_previewlanguage": "json",
               "header": [{ "key": "Content-Type", "value": "application/json" }],
               "body": "{\n  \"statusCode\": 409,\n  \"message\": \"Another student is already using this email\"\n}"
+            }
+          ]
+        },
+        {
+          "name": "Deactivate / Activate Student",
+          "request": {
+            "method": "PATCH",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"status\": \"deactivated\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/students/{{studentDbId}}/status",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "students", "{{studentDbId}}", "status"]
+            },
+            "description": "status must be \"active\" or \"deactivated\" — \"deleted\" is rejected here on purpose, use DELETE /students/:id for that transition instead. Send \"active\" to reactivate a deactivated student."
+          },
+          "response": [
+            {
+              "name": "200 OK (deactivated)",
+              "originalRequest": {
+                "method": "PATCH",
+                "header": [{ "key": "Content-Type", "value": "application/json" }],
+                "body": { "mode": "raw", "raw": "{\n  \"status\": \"deactivated\"\n}" },
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/students/{{studentDbId}}/status",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["api", "v1", "students", "{{studentDbId}}", "status"]
+                }
+              },
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [{ "key": "Content-Type", "value": "application/json" }],
+              "body": "{\n  \"status\": 200,\n  \"message\": \"Updated successfully\",\n  \"data\": {\n    \"id\": \"9cdd1f20-c30c-4dac-a858-0caa543bb538\",\n    \"studentId\": \"STU-2401\",\n    \"firstName\": \"Marie\",\n    \"lastName\": \"Curie\",\n    \"email\": \"marie.curie@example.com\",\n    \"phone\": \"(555) 555-0100\",\n    \"course\": \"Cybersecurity Fundamentals\",\n    \"streetAddress\": \"221B Baker Street\",\n    \"city\": \"San Francisco\",\n    \"state\": \"California\",\n    \"zipCode\": \"94107\",\n    \"country\": \"United States\",\n    \"status\": \"deactivated\",\n    \"assignedOn\": \"2026-09-02T12:19:03.576Z\",\n    \"createdAt\": \"2026-09-02T12:19:03.576Z\"\n  }\n}"
+            },
+            {
+              "name": "400 Bad Request (status not one of active/deactivated)",
+              "originalRequest": {
+                "method": "PATCH",
+                "header": [{ "key": "Content-Type", "value": "application/json" }],
+                "body": { "mode": "raw", "raw": "{\n  \"status\": \"deleted\"\n}" },
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/students/{{studentDbId}}/status",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["api", "v1", "students", "{{studentDbId}}", "status"]
+                }
+              },
+              "status": "Bad Request",
+              "code": 400,
+              "_postman_previewlanguage": "json",
+              "header": [{ "key": "Content-Type", "value": "application/json" }],
+              "body": "{\n  \"status\": 400,\n  \"message\": \"Validation failed\",\n  \"errors\": [\n    { \"field\": \"status\", \"message\": \"\\\"status\\\" must be one of [active, deactivated]\" }\n  ],\n  \"error\": \"Bad Request\"\n}"
+            },
+            {
+              "name": "404 Not Found",
+              "originalRequest": {
+                "method": "PATCH",
+                "header": [{ "key": "Content-Type", "value": "application/json" }],
+                "body": { "mode": "raw", "raw": "{\n  \"status\": \"active\"\n}" },
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/students/00000000-0000-0000-0000-000000000000/status",
+                  "host": ["{{baseUrl}}"],
+                  "path": [
+                    "api",
+                    "v1",
+                    "students",
+                    "00000000-0000-0000-0000-000000000000",
+                    "status"
+                  ]
+                }
+              },
+              "status": "Not Found",
+              "code": 404,
+              "_postman_previewlanguage": "json",
+              "header": [{ "key": "Content-Type", "value": "application/json" }],
+              "body": "{\n  \"statusCode\": 404,\n  \"message\": \"Student with ID 00000000-0000-0000-0000-000000000000 not found\"\n}"
+            }
+          ]
+        },
+        {
+          "name": "Delete Student",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/students/{{studentDbId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "students", "{{studentDbId}}"]
+            },
+            "description": "Soft-delete — sets status to \"deleted\", the row stays in the table (visible via GET /students?status=deleted or GET /students/:id). Calling this again on an already-deleted student 404s, since the existence check excludes deleted students on purpose."
+          },
+          "response": [
+            {
+              "name": "200 OK",
+              "originalRequest": {
+                "method": "DELETE",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/students/{{studentDbId}}",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["api", "v1", "students", "{{studentDbId}}"]
+                }
+              },
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [{ "key": "Content-Type", "value": "application/json" }],
+              "body": "{\n  \"status\": 200,\n  \"message\": \"Deleted successfully\",\n  \"data\": {\n    \"id\": \"9cdd1f20-c30c-4dac-a858-0caa543bb538\",\n    \"studentId\": \"STU-2401\",\n    \"firstName\": \"Marie\",\n    \"lastName\": \"Curie\",\n    \"email\": \"marie.curie@example.com\",\n    \"phone\": \"(555) 555-0100\",\n    \"course\": \"Cybersecurity Fundamentals\",\n    \"streetAddress\": \"221B Baker Street\",\n    \"city\": \"San Francisco\",\n    \"state\": \"California\",\n    \"zipCode\": \"94107\",\n    \"country\": \"United States\",\n    \"status\": \"deleted\",\n    \"assignedOn\": \"2026-09-02T12:19:03.576Z\",\n    \"createdAt\": \"2026-09-02T12:19:03.576Z\"\n  }\n}"
+            },
+            {
+              "name": "404 Not Found (already deleted, or never existed)",
+              "originalRequest": {
+                "method": "DELETE",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/students/00000000-0000-0000-0000-000000000000",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["api", "v1", "students", "00000000-0000-0000-0000-000000000000"]
+                }
+              },
+              "status": "Not Found",
+              "code": 404,
+              "_postman_previewlanguage": "json",
+              "header": [{ "key": "Content-Type", "value": "application/json" }],
+              "body": "{\n  \"statusCode\": 404,\n  \"message\": \"Student with ID 00000000-0000-0000-0000-000000000000 not found\"\n}"
             }
           ]
         }

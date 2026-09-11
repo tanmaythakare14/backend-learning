@@ -1,4 +1,5 @@
 import type { JSX } from 'react';
+import { Link } from 'react-router-dom';
 import { format } from 'date-fns';
 import { MoreHorizontal, Pencil, Power, Trash2 } from 'lucide-react';
 import {
@@ -16,6 +17,7 @@ import {
   DropdownMenuItem,
   DropdownMenuSeparator,
 } from '@/components/ui/dropdown-menu';
+import { STUDENT_LIST_PATH } from '../../constants';
 import type { StudentTableProps } from '../../@types';
 
 export function StudentTable({
@@ -51,7 +53,13 @@ export function StudentTable({
             <TableRow key={student.id} className="group">
               <TableCell className="font-medium text-foreground">{student.studentId}</TableCell>
               <TableCell>
-                {student.firstName} {student.lastName}
+                <Link
+                  to={`${STUDENT_LIST_PATH}/${student.id}`}
+                  state={{ student }}
+                  className="hover:text-primary hover:underline"
+                >
+                  {student.firstName} {student.lastName}
+                </Link>
               </TableCell>
               <TableCell className="text-muted-foreground">{student.email}</TableCell>
               <TableCell className="text-muted-foreground">{student.phone}</TableCell>

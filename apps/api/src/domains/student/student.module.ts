@@ -6,7 +6,11 @@ import { StudentService } from './service/student.service';
 import { StudentController } from './controller/student.controller';
 import { LoggerService } from '../../common/utils/logger.service';
 import { validate } from '../../common/middleware/validate.middleware';
-import { createStudentSchema, updateStudentSchema } from './validator/student.validator';
+import {
+  createStudentSchema,
+  updateStudentSchema,
+  updateStudentStatusSchema,
+} from './validator/student.validator';
 
 @Module({
   imports: [TypeOrmModule.forFeature([Student])],
@@ -22,5 +26,8 @@ export class StudentModule implements NestModule {
     consumer
       .apply(validate(updateStudentSchema))
       .forRoutes({ path: 'students/:id', method: RequestMethod.PUT });
+    consumer
+      .apply(validate(updateStudentStatusSchema))
+      .forRoutes({ path: 'students/:id/status', method: RequestMethod.PATCH });
   }
 }

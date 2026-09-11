@@ -1,5 +1,13 @@
 export type StudentStatus = 'active' | 'deactivated' | 'deleted';
 
+export interface StudentAddress {
+  street?: string;
+  city?: string;
+  state?: string;
+  zipCode?: string;
+  country?: string;
+}
+
 export interface Student {
   id: string;
   studentId: string;
@@ -10,6 +18,9 @@ export interface Student {
   course: string;
   assignedOn: string; // ISO date string
   status: StudentStatus;
+  address: StudentAddress;
+  /** Not returned by the API yet — always undefined until the backend tracks it. */
+  previousCourses?: string[];
 }
 
 export interface StudentFormValues {
@@ -18,6 +29,13 @@ export interface StudentFormValues {
   email: string;
   phone: string;
   course: string;
+  street: string;
+  /** ISO country code (e.g. "US") — the Combobox's internal value, converted to a full name before hitting the API. */
+  country: string;
+  /** ISO state code, scoped to the selected country. */
+  state: string;
+  city: string;
+  zipCode: string;
 }
 
 export interface StudentTableProps {
@@ -51,6 +69,11 @@ export interface StudentApiDto {
   status: StudentStatus;
   assignedOn: string;
   createdAt: string;
+  streetAddress: string | null;
+  city: string | null;
+  state: string | null;
+  zipCode: string | null;
+  country: string | null;
 }
 
 export interface CreateStudentPayload {
@@ -59,6 +82,11 @@ export interface CreateStudentPayload {
   email: string;
   phone: string;
   course: string;
+  streetAddress: string;
+  city: string;
+  state: string;
+  zipCode: string;
+  country: string;
 }
 
 /** Deliberately excludes firstName/lastName — matches the backend, which rejects them entirely. */
@@ -66,6 +94,11 @@ export interface UpdateStudentPayload {
   email: string;
   phone: string;
   course: string;
+  streetAddress: string;
+  city: string;
+  state: string;
+  zipCode: string;
+  country: string;
 }
 
 export interface ListStudentsParams {
@@ -82,4 +115,11 @@ export interface ConfirmActionDialogProps {
   confirmLabel: string;
   destructive?: boolean;
   onConfirm: () => void;
+}
+
+export type ConfirmActionType = 'activate' | 'deactivate' | 'delete';
+
+export interface ConfirmState {
+  type: ConfirmActionType;
+  student: Student;
 }

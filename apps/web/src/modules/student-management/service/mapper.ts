@@ -5,6 +5,7 @@ import type {
   CreateStudentPayload,
   UpdateStudentPayload,
 } from '../@types';
+import { getCountryNameByCode, getStateNameByCode } from '../utils/location';
 
 export function apiDtoToStudent(dto: StudentApiDto): Student {
   return {
@@ -17,6 +18,13 @@ export function apiDtoToStudent(dto: StudentApiDto): Student {
     course: dto.course,
     status: dto.status,
     assignedOn: dto.assignedOn,
+    address: {
+      street: dto.streetAddress ?? undefined,
+      city: dto.city ?? undefined,
+      state: dto.state ?? undefined,
+      zipCode: dto.zipCode ?? undefined,
+      country: dto.country ?? undefined,
+    },
   };
 }
 
@@ -27,6 +35,11 @@ export function formValuesToCreatePayload(values: StudentFormValues): CreateStud
     email: values.email.trim(),
     phone: values.phone.trim(),
     course: values.course,
+    streetAddress: values.street.trim(),
+    city: values.city.trim(),
+    state: getStateNameByCode(values.country, values.state),
+    zipCode: values.zipCode.trim(),
+    country: getCountryNameByCode(values.country),
   };
 }
 
@@ -35,5 +48,10 @@ export function formValuesToUpdatePayload(values: StudentFormValues): UpdateStud
     email: values.email.trim(),
     phone: values.phone.trim(),
     course: values.course,
+    streetAddress: values.street.trim(),
+    city: values.city.trim(),
+    state: getStateNameByCode(values.country, values.state),
+    zipCode: values.zipCode.trim(),
+    country: getCountryNameByCode(values.country),
   };
 }

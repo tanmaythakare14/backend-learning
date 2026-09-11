@@ -11,6 +11,7 @@ import { isValidUuid } from '../../../common/utils/uuid.util';
 import {
   CreateStudentDto,
   UpdateStudentDto,
+  UpdateStudentStatusDto,
   ListStudentsQuery,
   StudentOutDto,
 } from '../dto/student.dto';
@@ -47,6 +48,21 @@ export class StudentService {
     return students.map((student) => this.toOutDto(student));
   }
 
+  async getById(id: string): Promise<StudentOutDto> {
+    if (!isValidUuid(id)) {
+      throw new BadRequestException(
+        `"${id}" is not a valid student id — use the "id" field from the create/update response (a UUID), not the human-readable "studentId" (e.g. STU-2401)`,
+      );
+    }
+
+    const student = await this.repository.findByIdAnyStatus(id);
+    if (!student) {
+      throw new NotFoundException(`Student with ID ${id} not found`);
+    }
+
+    return this.toOutDto(student);
+  }
+
   async create(data: CreateStudentDto): Promise<StudentOutDto> {
     const email = data.email.trim().toLowerCase();
     this.audit.log('StudentService', 'Student creation started', { email });
@@ -66,6 +82,11 @@ export class StudentService {
       email,
       phone: data.phone.trim(),
       course: data.course,
+      streetAddress: data.streetAddress.trim(),
+      city: data.city.trim(),
+      state: data.state.trim(),
+      zipCode: data.zipCode.trim(),
+      country: data.country.trim(),
     });
 
     this.logger.info('New student enrolled');
@@ -79,18 +100,8 @@ export class StudentService {
   }
 
   async update(id: string, data: UpdateStudentDto): Promise<StudentOutDto> {
-    if (!isValidUuid(id)) {
-      throw new BadRequestException(
-        `"${id}" is not a valid student id — use the "id" field from the create/update response (a UUID), not the human-readable "studentId" (e.g. STU-2401)`,
-      );
-    }
-
+    await this.requireExisting(id);
     this.audit.log('StudentService', 'Student update started', { studentId: id });
-
-    const existing = await this.repository.findById(id);
-    if (!existing) {
-      throw new NotFoundException(`Student with ID ${id} not found`);
-    }
 
     const email = data.email.trim().toLowerCase();
     const emailTaken = await this.repository.findByEmail(email, id);
@@ -102,6 +113,11 @@ export class StudentService {
       email,
       phone: data.phone.trim(),
       course: data.course,
+      streetAddress: data.streetAddress.trim(),
+      city: data.city.trim(),
+      state: data.state.trim(),
+      zipCode: data.zipCode.trim(),
+      country: data.country.trim(),
     });
     if (!updated) {
       throw new NotFoundException(`Student with ID ${id} not found`);
@@ -110,6 +126,53 @@ export class StudentService {
     this.logger.info('Student details updated');
     this.audit.log('StudentService', 'Student update succeeded', { studentId: id }, 'info');
     return this.toOutDto(updated);
+  }
+
+  async updateStatus(id: string, data: UpdateStudentStatusDto): Promise<StudentOutDto> {
+    await this.requireExisting(id);
+
+    const updated = await this.repository.updateStatus(id, data.status);
+    if (!updated) {
+      throw new NotFoundException(`Student with ID ${id} not found`);
+    }
+
+    this.logger.info(data.status === 'active' ? 'Student activated' : 'Student deactivated');
+    this.audit.log(
+      'StudentService',
+      `Student status changed to ${data.status}`,
+      { studentId: id },
+      'info',
+    );
+    return this.toOutDto(updated);
+  }
+
+  async delete(id: string): Promise<StudentOutDto> {
+    await this.requireExisting(id);
+
+    const deleted = await this.repository.updateStatus(id, 'deleted');
+    if (!deleted) {
+      throw new NotFoundException(`Student with ID ${id} not found`);
+    }
+
+    this.logger.info('Student deleted');
+    this.audit.log('StudentService', 'Student deleted', { studentId: id }, 'info');
+    return this.toOutDto(deleted);
+  }
+
+  /** UUID format check + existence check, shared by update/updateStatus/delete. Excludes already-deleted students — none of these three operations should apply to one. */
+  private async requireExisting(id: string): Promise<Student> {
+    if (!isValidUuid(id)) {
+      throw new BadRequestException(
+        `"${id}" is not a valid student id — use the "id" field from the create/update response (a UUID), not the human-readable "studentId" (e.g. STU-2401)`,
+      );
+    }
+
+    const student = await this.repository.findById(id);
+    if (!student) {
+      throw new NotFoundException(`Student with ID ${id} not found`);
+    }
+
+    return student;
   }
 
   private toOutDto(student: Student): StudentOutDto {
@@ -124,6 +187,11 @@ export class StudentService {
       status: student.status,
       assignedOn: student.assignedOn,
       createdAt: student.createdAt,
+      streetAddress: student.streetAddress,
+      city: student.city,
+      state: student.state,
+      zipCode: student.zipCode,
+      country: student.country,
     };
   }
 }

@@ -170,12 +170,7 @@ export function CreateAccountScreen(): JSX.Element {
             )}
           />
 
-          <Button
-            type="submit"
-            className="w-full rounded-full"
-            size="lg"
-            disabled={form.formState.isSubmitting}
-          >
+          <Button type="submit" className="w-full" size="lg" disabled={form.formState.isSubmitting}>
             {form.formState.isSubmitting && <Loader2 className="h-4 w-4 animate-spin" />}
             {form.formState.isSubmitting ? 'Creating account…' : 'Create account'}
           </Button>

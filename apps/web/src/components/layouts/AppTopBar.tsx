@@ -1,6 +1,7 @@
 import type { JSX } from 'react';
 import { Bell } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { getInitials } from '@/utils/initials';
 
 export interface AppTopBarUser {
   fullName: string;
@@ -12,14 +13,6 @@ export interface AppTopBarProps {
   user: AppTopBarUser;
   hasUnreadNotifications?: boolean;
   onNotificationsClick?: () => void;
-}
-
-function getInitials(fullName: string): string {
-  const parts = fullName.trim().split(/\s+/);
-  return parts
-    .slice(0, 2)
-    .map((part) => part[0]?.toUpperCase() ?? '')
-    .join('');
 }
 
 export function AppTopBar({

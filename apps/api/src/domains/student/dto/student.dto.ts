@@ -5,18 +5,33 @@ export interface CreateStudentDto {
   email: string;
   phone: string;
   course: string;
+  streetAddress: string;
+  city: string;
+  state: string;
+  zipCode: string;
+  country: string;
 }
 
 /**
  * Update DTO — deliberately excludes firstName/lastName. A student's name is
- * immutable after enrollment; the update route only ever reads these three
- * fields (validate() also strips anything else the client sends, per
+ * immutable after enrollment; the update route only ever reads these fields
+ * (validate() also strips anything else the client sends, per
  * validate.middleware.ts's stripUnknown: true).
  */
 export interface UpdateStudentDto {
   email: string;
   phone: string;
   course: string;
+  streetAddress: string;
+  city: string;
+  state: string;
+  zipCode: string;
+  country: string;
+}
+
+/** Deactivate/activate DTO — `deleted` isn't accepted here, DELETE /students/:id handles that. */
+export interface UpdateStudentStatusDto {
+  status: 'active' | 'deactivated';
 }
 
 /**
@@ -43,4 +58,9 @@ export interface StudentOutDto {
   status: string;
   assignedOn: Date;
   createdAt: Date;
+  streetAddress: string | null;
+  city: string | null;
+  state: string | null;
+  zipCode: string | null;
+  country: string | null;
 }

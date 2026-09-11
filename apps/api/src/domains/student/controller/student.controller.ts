@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Put, Param, Body, Query, Res } from '@nestjs/common';
+import { Controller, Get, Post, Put, Patch, Delete, Param, Body, Query, Res } from '@nestjs/common';
 import {
   ApiTags,
   ApiOperation,
@@ -11,7 +11,12 @@ import {
 } from '@nestjs/swagger';
 import { Response } from 'express';
 import { StudentService } from '../service/student.service';
-import { CreateStudentDto, UpdateStudentDto, ListStudentsQuery } from '../dto/student.dto';
+import {
+  CreateStudentDto,
+  UpdateStudentDto,
+  UpdateStudentStatusDto,
+  ListStudentsQuery,
+} from '../dto/student.dto';
 import { HttpStatus } from '../../../common/constants/http-status.constants';
 import { SuccessMessages } from '../../../common/constants/success-messages.constants';
 import { generateResponse } from '../../../common/utils/response.util';
@@ -38,6 +43,16 @@ export class StudentController {
   @ApiBadRequestResponse({ description: 'Invalid status value' })
   async findAll(@Query() query: ListStudentsQuery, @Res() res: Response): Promise<Response> {
     const data = await this.service.findAll(query);
+    return generateResponse(res, { statusCode: HttpStatus.OK, data });
+  }
+
+  @Get(':id')
+  @ApiOperation({ summary: 'Get a single student by id (any status, including deleted)' })
+  @ApiOkResponse({ description: 'Student found' })
+  @ApiBadRequestResponse({ description: 'Not a valid UUID' })
+  @ApiNotFoundResponse({ description: 'Student not found' })
+  async findOne(@Param('id') id: string, @Res() res: Response): Promise<Response> {
+    const data = await this.service.getById(id);
     return generateResponse(res, { statusCode: HttpStatus.OK, data });
   }
 
@@ -70,6 +85,38 @@ export class StudentController {
     return generateResponse(res, {
       statusCode: HttpStatus.OK,
       message: SuccessMessages.UPDATED,
+      data,
+    });
+  }
+
+  @Patch(':id/status')
+  @ApiOperation({ summary: 'Activate or deactivate a student' })
+  @ApiOkResponse({ description: 'Status updated' })
+  @ApiBadRequestResponse({ description: 'Invalid id or status' })
+  @ApiNotFoundResponse({ description: 'Student not found' })
+  async updateStatus(
+    @Param('id') id: string,
+    @Body() body: UpdateStudentStatusDto,
+    @Res() res: Response,
+  ): Promise<Response> {
+    const data = await this.service.updateStatus(id, body);
+    return generateResponse(res, {
+      statusCode: HttpStatus.OK,
+      message: SuccessMessages.UPDATED,
+      data,
+    });
+  }
+
+  @Delete(':id')
+  @ApiOperation({ summary: 'Soft-delete a student (sets status to deleted)' })
+  @ApiOkResponse({ description: 'Student deleted' })
+  @ApiBadRequestResponse({ description: 'Invalid id' })
+  @ApiNotFoundResponse({ description: 'Student not found' })
+  async remove(@Param('id') id: string, @Res() res: Response): Promise<Response> {
+    const data = await this.service.delete(id);
+    return generateResponse(res, {
+      statusCode: HttpStatus.OK,
+      message: SuccessMessages.DELETED,
       data,
     });
   }
