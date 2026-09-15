@@ -26,3 +26,14 @@ export interface LoginOutDto {
   token: string;
   user: UserOutDto;
 }
+
+/** Forgot-password DTO — the account email to send a reset link to (if it exists) */
+export interface ForgotPasswordDto {
+  email: string;
+}
+
+/** Reset-password DTO — the raw token from the emailed link, plus the new password */
+export interface ResetPasswordDto {
+  token: string;
+  password: string;
+}

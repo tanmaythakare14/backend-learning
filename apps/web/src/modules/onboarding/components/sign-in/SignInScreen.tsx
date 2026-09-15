@@ -18,7 +18,12 @@ import {
 } from '@/components/ui/form';
 import { useAppDispatch } from '@/store/hooks';
 import { loginThunk } from '@/store/slices/authSlice';
-import { PRODUCT_NAME, CREATE_ACCOUNT_PATH, DASHBOARD_PATH } from '../../constants';
+import {
+  PRODUCT_NAME,
+  CREATE_ACCOUNT_PATH,
+  DASHBOARD_PATH,
+  FORGOT_PASSWORD_PATH,
+} from '../../constants';
 import { OnboardingScreenLayout } from '../onboarding-screen-layout';
 import { SocialAuthButtons } from '../social-auth-buttons';
 import { signInSchema, type SignInFormValues } from './schema';
@@ -116,6 +121,13 @@ export function SignInScreen(): JSX.Element {
             {form.formState.isSubmitting && <Loader2 className="h-4 w-4 animate-spin" />}
             {form.formState.isSubmitting ? 'Signing in…' : 'Sign in'}
           </Button>
+
+          <Link
+            to={FORGOT_PASSWORD_PATH}
+            className="block text-center text-sm font-medium text-primary hover:underline"
+          >
+            Forgot password?
+          </Link>
         </form>
       </Form>
 

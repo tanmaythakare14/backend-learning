@@ -5,6 +5,7 @@ import type {
   CreateStudentPayload,
   UpdateStudentPayload,
   ListStudentsParams,
+  CourseSummaryDto,
 } from '../@types';
 
 export async function listStudents(params: ListStudentsParams): Promise<StudentApiDto[]> {
@@ -100,6 +101,24 @@ export async function updateStudentStatus(
   }
 
   return (body as { data: StudentApiDto }).data;
+}
+
+/** This module owns its own fetch to the courses endpoint (rather than importing
+ * course-management's service) per the "no cross-module imports" rule. */
+export async function listActiveCourseNames(): Promise<string[]> {
+  const url = new URL(`${config.apiUrl}/api/v1/courses`);
+  url.searchParams.set('status', 'active');
+
+  const res = await fetch(url.toString());
+  const body: { data?: CourseSummaryDto[]; message?: string } | undefined = await res
+    .json()
+    .catch(() => undefined);
+
+  if (!res.ok) {
+    handleHttpError(res.status, body);
+  }
+
+  return (body as { data: CourseSummaryDto[] }).data.map((course) => course.name);
 }
 
 export async function deleteStudent(id: string): Promise<StudentApiDto> {

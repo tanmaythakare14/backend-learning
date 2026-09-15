@@ -26,3 +26,18 @@ export const loginSchema = Joi.object({
   email: Joi.string().email().required(),
   password: Joi.string().required(),
 });
+
+export const forgotPasswordSchema = Joi.object({
+  email: Joi.string().email().required(),
+});
+
+/** Same password complexity rules as registerSchema — a reset shouldn't allow a weaker password. */
+export const resetPasswordSchema = Joi.object({
+  token: Joi.string().min(1).required(),
+  password: Joi.string()
+    .min(8)
+    .pattern(/[A-Z]/, 'uppercase letter')
+    .pattern(/[0-9]/, 'number')
+    .pattern(/[^A-Za-z0-9]/, 'special character')
+    .required(),
+});

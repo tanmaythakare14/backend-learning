@@ -3,6 +3,8 @@ export const PRODUCT_NAME = 'Cognify';
 export const CREATE_ACCOUNT_PATH = '/register';
 export const SIGN_IN_PATH = '/login';
 export const DASHBOARD_PATH = '/dashboard';
+export const FORGOT_PASSWORD_PATH = '/forgot-password';
+export const RESET_PASSWORD_PATH = '/reset-password';
 
 export const PASSWORD_STRENGTH_RULES: Array<{
   label: string;

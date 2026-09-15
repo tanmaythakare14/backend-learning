@@ -1,6 +1,6 @@
 import { Country, State, City } from 'country-state-city';
 import type { ComboboxOption } from '@/components/ui/combobox';
-import type { StudentAddress } from '../@types';
+import type { StudentAddress, ZipLookupResult } from '../@types';
 
 export function getCountryOptions(): ComboboxOption[] {
   return Country.getAllCountries().map((country) => ({
@@ -39,6 +39,31 @@ function findStateIsoCodeByName(countryIsoCode: string, name: string): string {
   return (
     State.getStatesOfCountry(countryIsoCode).find((state) => state.name === name)?.isoCode ?? ''
   );
+}
+
+/** Matches a postal-code lookup's state (by abbreviation, then by full name) against this
+ * app's ISO-coded state list. Returns '' if neither matches — caller leaves it for manual pick. */
+export function resolveZipLookupStateCode(
+  countryIsoCode: string,
+  lookup: Pick<ZipLookupResult, 'stateName' | 'stateAbbreviation'>,
+): string {
+  const byAbbreviation = getStateOptions(countryIsoCode).find(
+    (option) => option.value.toLowerCase() === lookup.stateAbbreviation.toLowerCase(),
+  );
+  return byAbbreviation?.value ?? findStateIsoCodeByName(countryIsoCode, lookup.stateName);
+}
+
+/** Matches a postal-code lookup's city name against this app's local city list for that
+ * state, case-insensitively. Returns '' if there's no match — caller leaves it for manual pick. */
+export function resolveZipLookupCity(
+  countryIsoCode: string,
+  stateIsoCode: string,
+  cityName: string,
+): string {
+  const match = getCityOptions(countryIsoCode, stateIsoCode).find(
+    (option) => option.value.toLowerCase() === cityName.toLowerCase(),
+  );
+  return match?.value ?? '';
 }
 
 export interface AddressFormValues {

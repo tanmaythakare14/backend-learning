@@ -1,5 +1,4 @@
 import Joi from 'joi';
-import { COMPUTER_ENGINEERING_COURSES } from '../constants/courses.constants';
 
 const addressFields = {
   streetAddress: Joi.string().min(1).required(),
@@ -9,14 +8,18 @@ const addressFields = {
   country: Joi.string().min(1).required(),
 };
 
+/**
+ * course is deliberately a free-text non-empty string, not a fixed enum —
+ * courses are managed dynamically via the course-management module (frontend
+ * mock catalog today), so a hardcoded whitelist here would reject any
+ * legitimate course that didn't exist when this file was last edited.
+ */
 export const createStudentSchema = Joi.object({
   firstName: Joi.string().min(1).required(),
   lastName: Joi.string().min(1).required(),
   email: Joi.string().email().required(),
   phone: Joi.string().min(10).required(),
-  course: Joi.string()
-    .valid(...COMPUTER_ENGINEERING_COURSES)
-    .required(),
+  course: Joi.string().min(1).required(),
   ...addressFields,
 });
 
@@ -28,9 +31,7 @@ export const createStudentSchema = Joi.object({
 export const updateStudentSchema = Joi.object({
   email: Joi.string().email().required(),
   phone: Joi.string().min(10).required(),
-  course: Joi.string()
-    .valid(...COMPUTER_ENGINEERING_COURSES)
-    .required(),
+  course: Joi.string().min(1).required(),
   ...addressFields,
 });
 

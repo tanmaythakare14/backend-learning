@@ -10,7 +10,7 @@ import {
 } from '@nestjs/swagger';
 import { Response } from 'express';
 import { AuthService } from '../service/auth.service';
-import { RegisterDto, LoginDto } from '../dto/auth.dto';
+import { RegisterDto, LoginDto, ForgotPasswordDto, ResetPasswordDto } from '../dto/auth.dto';
 import { HttpStatus } from '../../../common/constants/http-status.constants';
 import { SuccessMessages } from '../../../common/constants/success-messages.constants';
 import { generateResponse } from '../../../common/utils/response.util';
@@ -44,5 +44,26 @@ export class AuthController {
       statusCode: HttpStatus.OK,
       data,
     });
+  }
+
+  @Post('forgot-password')
+  @ApiOperation({ summary: 'Request a password reset link by email' })
+  @ApiOkResponse({ description: 'Always 200 — does not reveal whether the email is registered' })
+  @ApiBadRequestResponse({ description: 'Validation failed' })
+  async forgotPassword(@Body() body: ForgotPasswordDto, @Res() res: Response): Promise<Response> {
+    await this.service.requestPasswordReset(body);
+    return generateResponse(res, {
+      statusCode: HttpStatus.OK,
+      message: 'If an account exists for this email, a reset link has been sent.',
+    });
+  }
+
+  @Post('reset-password')
+  @ApiOperation({ summary: 'Set a new password using the token from the emailed reset link' })
+  @ApiOkResponse({ description: 'Password reset' })
+  @ApiBadRequestResponse({ description: 'Invalid/expired token, or validation failed' })
+  async resetPassword(@Body() body: ResetPasswordDto, @Res() res: Response): Promise<Response> {
+    await this.service.resetPassword(body);
+    return generateResponse(res, { statusCode: HttpStatus.OK, message: SuccessMessages.UPDATED });
   }
 }

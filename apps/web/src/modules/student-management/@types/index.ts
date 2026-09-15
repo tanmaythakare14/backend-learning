@@ -123,3 +123,17 @@ export interface ConfirmState {
   type: ConfirmActionType;
   student: Student;
 }
+
+/** Result of a postal-code lookup — names/abbreviation as returned by the lookup provider, not yet resolved to this app's ISO codes. */
+export interface ZipLookupResult {
+  stateName: string;
+  stateAbbreviation: string;
+  city: string;
+}
+
+/** Minimal shape read off GET /courses for the "Assigned course" dropdown and filter — this
+ * module owns its own fetch rather than importing course-management's service, per the
+ * "no cross-module imports" rule. */
+export interface CourseSummaryDto {
+  name: string;
+}

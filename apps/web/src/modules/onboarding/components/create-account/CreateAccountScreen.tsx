@@ -22,7 +22,7 @@ import { useAppDispatch } from '@/store/hooks';
 import { loginThunk } from '@/store/slices/authSlice';
 import { PRODUCT_NAME, SIGN_IN_PATH, DASHBOARD_PATH } from '../../constants';
 import { OnboardingScreenLayout } from '../onboarding-screen-layout';
-import { PasswordStrengthField } from './PasswordStrengthField';
+import { PasswordStrengthField } from '../password-strength-field';
 import { SocialAuthButtons } from '../social-auth-buttons';
 import { createAccountSchema, type CreateAccountFormValues } from './schema';
 import { registerAccount, formValuesToRegisterPayload } from '../../service';

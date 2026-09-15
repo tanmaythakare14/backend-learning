@@ -5,12 +5,18 @@ import { AuthRepository } from './repository/auth.repository';
 import { AuthService } from './service/auth.service';
 import { AuthController } from './controller/auth.controller';
 import { LoggerService } from '../../common/utils/logger.service';
+import { MailService } from '../../common/utils/mail.service';
 import { validate, validateLogin } from '../../common/middleware/validate.middleware';
-import { registerSchema, loginSchema } from './validator/auth.validator';
+import {
+  registerSchema,
+  loginSchema,
+  forgotPasswordSchema,
+  resetPasswordSchema,
+} from './validator/auth.validator';
 
 @Module({
   imports: [TypeOrmModule.forFeature([User])],
-  providers: [AuthRepository, AuthService, LoggerService],
+  providers: [AuthRepository, AuthService, LoggerService, MailService],
   controllers: [AuthController],
   exports: [AuthService],
 })
@@ -25,5 +31,11 @@ export class AuthModule implements NestModule {
     consumer
       .apply(validateLogin(loginSchema))
       .forRoutes({ path: 'auth/login', method: RequestMethod.POST });
+    consumer
+      .apply(validate(forgotPasswordSchema))
+      .forRoutes({ path: 'auth/forgot-password', method: RequestMethod.POST });
+    consumer
+      .apply(validate(resetPasswordSchema))
+      .forRoutes({ path: 'auth/reset-password', method: RequestMethod.POST });
   }
 }

@@ -6,6 +6,7 @@ import { HealthCheckModule } from './domains/health-check/health-check.module';
 import { AuthModule } from './domains/auth/auth.module';
 import { StudentModule } from './domains/student/student.module';
 import { ChatModule } from './domains/chat/chat.module';
+import { CourseModule } from './domains/course/course.module';
 import { ExampleModule } from './domains/example/example.module';
 import { LoggingModule } from './common/logging.module';
 import { AuditMiddleware } from './common/middleware/audit.middleware';
@@ -24,6 +25,7 @@ import { AuditMiddleware } from './common/middleware/audit.middleware';
     AuthModule,
     StudentModule,
     ChatModule,
+    CourseModule,
     // ExampleModule's routes are intentionally last — its bare @Controller()
     // + @Get(':id') greedily matches ANY GET /api/v1/<one-segment> path, so
     // any sibling module with a same-shape route (e.g. this domain's

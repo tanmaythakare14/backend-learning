@@ -1,13 +1,28 @@
 import { Injectable } from '@nestjs/common';
+import { randomBytes, createHash } from 'crypto';
 import * as argon2 from 'argon2';
 import jwt from 'jsonwebtoken';
 import { AuthRepository } from '../repository/auth.repository';
 import { LoggerService } from '../../../common/utils/logger.service';
 import { AuditLogger } from '../../../common/utils/audit-logger.service';
-import { ConflictException, UnauthorizedException } from '../../../common/exceptions';
+import { MailService } from '../../../common/utils/mail.service';
+import {
+  BadRequestException,
+  ConflictException,
+  UnauthorizedException,
+} from '../../../common/exceptions';
 import { AuthErrorMessages } from '../../../common/constants/auth-error-messages.constants';
-import { RegisterDto, LoginDto, LoginOutDto, UserOutDto } from '../dto/auth.dto';
+import {
+  RegisterDto,
+  LoginDto,
+  LoginOutDto,
+  UserOutDto,
+  ForgotPasswordDto,
+  ResetPasswordDto,
+} from '../dto/auth.dto';
 import { User } from '../entities/user.entity';
+
+const PASSWORD_RESET_TOKEN_TTL_MS = 60 * 60 * 1000; // 1 hour
 
 @Injectable()
 export class AuthService {
@@ -15,6 +30,7 @@ export class AuthService {
     private readonly repository: AuthRepository,
     private readonly logger: LoggerService,
     private readonly audit: AuditLogger,
+    private readonly mail: MailService,
   ) {}
 
   async register(data: RegisterDto): Promise<UserOutDto> {
@@ -65,6 +81,53 @@ export class AuthService {
     this.logger.info('User logged in');
     this.audit.log('AuthService', 'Login succeeded', { userId: user.id }, 'info');
     return { token, user: this.toOutDto(user) };
+  }
+
+  /**
+   * Always resolves the same way regardless of whether the email is
+   * registered — responding differently for known vs. unknown emails would
+   * let an attacker enumerate which addresses have accounts.
+   */
+  async requestPasswordReset(data: ForgotPasswordDto): Promise<void> {
+    const email = data.email.trim().toLowerCase();
+    this.audit.log('AuthService', 'Password reset requested', { email });
+
+    const user = await this.repository.findByEmail(email);
+    if (!user || !user.isActive) {
+      this.audit.log(
+        'AuthService',
+        'Password reset requested for unknown or inactive email',
+        { email },
+        'warn',
+      );
+      return;
+    }
+
+    const rawToken = randomBytes(32).toString('hex');
+    const tokenHash = createHash('sha256').update(rawToken).digest('hex');
+    const expiresAt = new Date(Date.now() + PASSWORD_RESET_TOKEN_TTL_MS);
+    await this.repository.setPasswordResetToken(user.id, tokenHash, expiresAt);
+
+    const webAppUrl = process.env.WEB_APP_URL || 'http://localhost:3000';
+    const resetUrl = `${webAppUrl}/reset-password?token=${rawToken}`;
+    await this.mail.sendPasswordResetEmail(user.email, resetUrl);
+
+    this.logger.info('Password reset email dispatched');
+    this.audit.log('AuthService', 'Password reset email dispatched', { userId: user.id }, 'info');
+  }
+
+  async resetPassword(data: ResetPasswordDto): Promise<void> {
+    const tokenHash = createHash('sha256').update(data.token).digest('hex');
+    const user = await this.repository.findByValidResetToken(tokenHash);
+    if (!user) {
+      throw new BadRequestException('This reset link is invalid or has expired');
+    }
+
+    const passwordHash = await argon2.hash(data.password);
+    await this.repository.resetPassword(user.id, passwordHash);
+
+    this.logger.info('Password reset completed');
+    this.audit.log('AuthService', 'Password reset completed', { userId: user.id }, 'info');
   }
 
   private toOutDto(user: User): UserOutDto {

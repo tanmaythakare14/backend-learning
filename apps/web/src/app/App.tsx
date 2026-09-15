@@ -1,8 +1,14 @@
 import { Navigate, Route, Routes } from 'react-router-dom';
 import type { JSX, ReactNode } from 'react';
-import { CreateAccountScreen, SignInScreen } from '../modules/onboarding';
+import {
+  CreateAccountScreen,
+  SignInScreen,
+  ForgotPasswordScreen,
+  ResetPasswordScreen,
+} from '../modules/onboarding';
 import { StudentManagementScreen, StudentDetailScreen } from '../modules/student-management';
 import { MessageScreen } from '../modules/message';
+import { CourseManagementScreen } from '../modules/course-management';
 import { AppShell } from '../components/layouts';
 import { Toaster } from '../components/ui/sonner';
 import { ProtectedRoute } from '../components/ProtectedRoute';
@@ -43,6 +49,8 @@ function App() {
         <Route path="/" element={<Navigate to="/register" replace />} />
         <Route path="/register" element={<CreateAccountScreen />} />
         <Route path="/login" element={<SignInScreen />} />
+        <Route path="/forgot-password" element={<ForgotPasswordScreen />} />
+        <Route path="/reset-password" element={<ResetPasswordScreen />} />
 
         <Route element={<ProtectedRoute />}>
           <Route path="/dashboard" element={<PlaceholderPage title="Dashboard" />} />
@@ -70,7 +78,14 @@ function App() {
               </AuthenticatedShell>
             }
           />
-          <Route path="/teachers" element={<PlaceholderPage title="Teachers" />} />
+          <Route
+            path="/courses"
+            element={
+              <AuthenticatedShell>
+                <CourseManagementScreen />
+              </AuthenticatedShell>
+            }
+          />
           <Route path="/settings" element={<PlaceholderPage title="Settings" />} />
         </Route>
       </Routes>

@@ -25,4 +25,28 @@ export class AuthRepository {
     const user = this.repository.create({ ...data, isActive: true });
     return this.repository.save(user);
   }
+
+  async setPasswordResetToken(userId: string, tokenHash: string, expiresAt: Date): Promise<void> {
+    await this.repository.update(userId, {
+      passwordResetTokenHash: tokenHash,
+      passwordResetExpiresAt: expiresAt,
+    });
+  }
+
+  /** Only matches a token that hasn't expired — an expired or unknown hash returns null. */
+  async findByValidResetToken(tokenHash: string): Promise<User | null> {
+    return this.repository
+      .createQueryBuilder('user')
+      .where('user.password_reset_token_hash = :tokenHash', { tokenHash })
+      .andWhere('user.password_reset_expires_at > :now', { now: new Date() })
+      .getOne();
+  }
+
+  async resetPassword(userId: string, passwordHash: string): Promise<void> {
+    await this.repository.update(userId, {
+      passwordHash,
+      passwordResetTokenHash: null,
+      passwordResetExpiresAt: null,
+    });
+  }
 }

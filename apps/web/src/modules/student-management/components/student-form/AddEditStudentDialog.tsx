@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import type { JSX } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -31,14 +31,16 @@ import {
   FormMessage,
 } from '@/components/ui/form';
 import { ApiError } from '@/utils/apiError';
-import { COMPUTER_ENGINEERING_COURSES } from '../../constants';
 import type { AddEditStudentDialogProps } from '../../@types';
 import {
   addressToFormValues,
   getCountryOptions,
   getStateOptions,
   getCityOptions,
+  resolveZipLookupStateCode,
+  resolveZipLookupCity,
 } from '../../utils';
+import { lookupZipCode, listActiveCourseNames } from '../../service';
 import { studentFormSchema, type StudentFormSchemaValues } from './schema';
 
 const EMPTY_VALUES: StudentFormSchemaValues = {
@@ -63,11 +65,18 @@ export function AddEditStudentDialog({
   onSubmit,
 }: AddEditStudentDialogProps): JSX.Element {
   const [submitError, setSubmitError] = useState<string | null>(null);
+  const [isLookingUpZip, setIsLookingUpZip] = useState(false);
+  const [courseOptions, setCourseOptions] = useState<string[]>([]);
+  const zipLookupTimeoutRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
 
   const form = useForm<StudentFormSchemaValues>({
     resolver: zodResolver(studentFormSchema),
     defaultValues: EMPTY_VALUES,
   });
+
+  useEffect(() => {
+    return () => clearTimeout(zipLookupTimeoutRef.current);
+  }, []);
 
   useEffect(() => {
     if (open) {
@@ -84,6 +93,7 @@ export function AddEditStudentDialog({
             }
           : EMPTY_VALUES,
       );
+      listActiveCourseNames().then(setCourseOptions);
     }
   }, [open, student, form]);
 
@@ -92,6 +102,34 @@ export function AddEditStudentDialog({
   const stateOptions = selectedCountry ? getStateOptions(selectedCountry) : [];
   const cityOptions =
     selectedCountry && selectedState ? getCityOptions(selectedCountry, selectedState) : [];
+
+  /** Debounced so it only fires once the admin pauses typing, and only for
+   * user input — form.reset() (opening the dialog) never routes through here. */
+  const handleZipCodeChange = (value: string, onChange: (value: string) => void): void => {
+    onChange(value);
+    clearTimeout(zipLookupTimeoutRef.current);
+
+    const trimmed = value.trim();
+    if (trimmed.length < 3) return;
+
+    zipLookupTimeoutRef.current = setTimeout(() => {
+      const countryForLookup = form.getValues('country') || 'US';
+      setIsLookingUpZip(true);
+      lookupZipCode(countryForLookup, trimmed)
+        .then((result) => {
+          if (!result) return;
+          const stateIsoCode = resolveZipLookupStateCode(countryForLookup, result);
+          const city = stateIsoCode
+            ? resolveZipLookupCity(countryForLookup, stateIsoCode, result.city)
+            : '';
+
+          form.setValue('country', countryForLookup, { shouldValidate: true });
+          if (stateIsoCode) form.setValue('state', stateIsoCode, { shouldValidate: true });
+          if (city) form.setValue('city', city, { shouldValidate: true });
+        })
+        .finally(() => setIsLookingUpZip(false));
+    }, 500);
+  };
 
   const handleSubmit = async (values: StudentFormSchemaValues): Promise<void> => {
     setSubmitError(null);
@@ -208,7 +246,7 @@ export function AddEditStudentDialog({
                         <SelectValue placeholder="Select a course" />
                       </SelectTrigger>
                       <SelectContent>
-                        {COMPUTER_ENGINEERING_COURSES.map((course) => (
+                        {courseOptions.map((course) => (
                           <SelectItem key={course} value={course}>
                             {course}
                           </SelectItem>
@@ -221,23 +259,33 @@ export function AddEditStudentDialog({
               )}
             />
 
-            <FormField
-              control={form.control}
-              name="street"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>
-                    Street address <span className="text-destructive">*</span>
-                  </FormLabel>
-                  <FormControl>
-                    <Input placeholder="123 Main St" required {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-
             <div className="grid grid-cols-2 gap-4">
+              <FormField
+                control={form.control}
+                name="zipCode"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>
+                      ZIP / postal code <span className="text-destructive">*</span>
+                    </FormLabel>
+                    <FormControl>
+                      <div className="relative">
+                        <Input
+                          placeholder="94107"
+                          required
+                          {...field}
+                          onChange={(e) => handleZipCodeChange(e.target.value, field.onChange)}
+                          className={isLookingUpZip ? 'pr-9' : undefined}
+                        />
+                        {isLookingUpZip && (
+                          <Loader2 className="absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 animate-spin text-muted-foreground" />
+                        )}
+                      </div>
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
               <FormField
                 control={form.control}
                 name="country"
@@ -263,6 +311,9 @@ export function AddEditStudentDialog({
                   </FormItem>
                 )}
               />
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
               <FormField
                 control={form.control}
                 name="state"
@@ -289,9 +340,6 @@ export function AddEditStudentDialog({
                   </FormItem>
                 )}
               />
-            </div>
-
-            <div className="grid grid-cols-2 gap-4">
               <FormField
                 control={form.control}
                 name="city"
@@ -315,22 +363,23 @@ export function AddEditStudentDialog({
                   </FormItem>
                 )}
               />
-              <FormField
-                control={form.control}
-                name="zipCode"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>
-                      ZIP / postal code <span className="text-destructive">*</span>
-                    </FormLabel>
-                    <FormControl>
-                      <Input placeholder="94107" required {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
             </div>
+
+            <FormField
+              control={form.control}
+              name="street"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>
+                    Street address <span className="text-destructive">*</span>
+                  </FormLabel>
+                  <FormControl>
+                    <Input placeholder="123 Main St" required {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
 
             <DialogFooter>
               <Button

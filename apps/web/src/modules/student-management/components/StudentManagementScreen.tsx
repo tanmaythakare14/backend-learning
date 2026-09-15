@@ -1,10 +1,10 @@
 import { useEffect, useState } from 'react';
 import type { JSX } from 'react';
-import { Loader2, Search, UserPlus } from 'lucide-react';
+import { Loader2, UserPlus } from 'lucide-react';
 import { toast } from 'sonner';
-import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
+import { SearchInput } from '@/components/common/SearchInput';
 import { ApiError } from '@/utils/apiError';
 import { ALL_STUDENT_STATUSES, STUDENT_STATUS_TABS } from '../constants';
 import type { Student, StudentStatus, StudentFormValues } from '../@types';
@@ -151,15 +151,12 @@ export function StudentManagementScreen(): JSX.Element {
 
           <div className="flex items-center gap-3">
             <CourseFilterPopover selectedCourses={selectedCourses} onChange={setSelectedCourses} />
-            <div className="relative">
-              <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-              <Input
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-                placeholder="Search student name and email address"
-                className="h-10 w-72 pl-9"
-              />
-            </div>
+            <SearchInput
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder="Search student name and email address"
+              containerClassName="w-72"
+            />
             <Button onClick={handleAddNew} className="h-10 gap-2">
               <UserPlus className="h-4 w-4" />
               Add New Student

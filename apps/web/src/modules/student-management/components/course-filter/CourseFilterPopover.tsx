@@ -1,20 +1,25 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import type { JSX } from 'react';
 import { Check, ListFilter, Search, X } from 'lucide-react';
 import { Popover, PopoverTrigger, PopoverContent } from '@/components/ui/popover';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { cn } from '@/lib/utils';
-import { COMPUTER_ENGINEERING_COURSES } from '../../constants';
 import type { CourseFilterPopoverProps } from '../../@types';
+import { listActiveCourseNames } from '../../service';
 
 export function CourseFilterPopover({
   selectedCourses,
   onChange,
 }: CourseFilterPopoverProps): JSX.Element {
   const [search, setSearch] = useState('');
+  const [courseNames, setCourseNames] = useState<string[]>([]);
 
-  const visibleCourses = COMPUTER_ENGINEERING_COURSES.filter((course) =>
+  useEffect(() => {
+    listActiveCourseNames().then(setCourseNames);
+  }, []);
+
+  const visibleCourses = courseNames.filter((course) =>
     course.toLowerCase().includes(search.toLowerCase()),
   );
 

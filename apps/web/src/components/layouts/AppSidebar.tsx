@@ -5,7 +5,7 @@ import {
   LayoutDashboard,
   Users,
   MessageSquare,
-  Presentation,
+  BookOpen,
   Settings,
   LogOut,
   PanelLeftClose,
@@ -24,7 +24,7 @@ const NAV_ITEMS: NavItem[] = [
   { label: 'Dashboard', path: '/dashboard', icon: LayoutDashboard },
   { label: 'Student Management', path: '/students', icon: Users },
   { label: 'Message', path: '/messages', icon: MessageSquare },
-  { label: 'Teachers', path: '/teachers', icon: Presentation },
+  { label: 'Course Management', path: '/courses', icon: BookOpen },
   { label: 'Settings', path: '/settings', icon: Settings },
 ];
 
