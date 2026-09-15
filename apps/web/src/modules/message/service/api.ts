@@ -1,93 +1,92 @@
-import { formatFileSize, inferAttachmentKind } from '../utils';
+import { config } from '@/config/environment';
+import { handleHttpError } from '@/utils/apiError';
 import type {
-  ChatParticipant,
   ConversationApiDto,
   MessageApiDto,
+  MessageAttachment,
   SendMessagePayload,
+  StudentSummaryDto,
+  UploadedAttachmentDto,
 } from '../@types';
-import { MOCK_CONVERSATIONS, MOCK_MESSAGES, MOCK_PARTICIPANTS } from './mockData';
 
-// In-memory store standing in for a real backend — no chat endpoint exists
-// yet. Shape mirrors what a real API would return, so swapping these for
-// real `fetch` calls later is a drop-in replacement.
-let conversations: ConversationApiDto[] = MOCK_CONVERSATIONS.map((conversation) => ({
-  ...conversation,
-}));
-let messages: MessageApiDto[] = [...MOCK_MESSAGES];
-let nextMessageSeq = messages.length + 1;
+const CHAT_BASE_URL = `${config.apiUrl}/api/v1/chat`;
 
-function delay<T>(value: T, ms = 300): Promise<T> {
-  return new Promise((resolve) => setTimeout(() => resolve(value), ms));
+async function parseJson<TData>(res: Response): Promise<TData> {
+  const body: { data?: TData; message?: string } | undefined = await res
+    .json()
+    .catch(() => undefined);
+  if (!res.ok) {
+    handleHttpError(res.status, body);
+  }
+  return (body as { data: TData }).data;
 }
 
-function lastMessageFor(conversationId: string): MessageApiDto | null {
-  const thread = messages.filter((message) => message.conversationId === conversationId);
-  return thread.length > 0 ? thread[thread.length - 1] : null;
+async function assertOk(res: Response): Promise<void> {
+  if (res.ok) return;
+  const body: { message?: string } | undefined = await res.json().catch(() => undefined);
+  handleHttpError(res.status, body);
 }
 
 export async function listConversations(): Promise<ConversationApiDto[]> {
-  const withLastMessage = conversations
-    .map((conversation) => ({ ...conversation, lastMessage: lastMessageFor(conversation.id) }))
-    .sort((a, b) => {
-      const aTime = a.lastMessage ? new Date(a.lastMessage.sentAt).getTime() : 0;
-      const bTime = b.lastMessage ? new Date(b.lastMessage.sentAt).getTime() : 0;
-      return bTime - aTime;
-    });
-  return delay(withLastMessage);
+  const res = await fetch(`${CHAT_BASE_URL}/conversations`);
+  return parseJson<ConversationApiDto[]>(res);
 }
 
 export async function listMessages(conversationId: string): Promise<MessageApiDto[]> {
-  return delay(messages.filter((message) => message.conversationId === conversationId));
+  const res = await fetch(`${CHAT_BASE_URL}/conversations/${conversationId}/messages`);
+  return parseJson<MessageApiDto[]>(res);
 }
 
-export async function listParticipants(): Promise<ChatParticipant[]> {
-  return delay(MOCK_PARTICIPANTS);
+export async function startConversation(studentId: string): Promise<ConversationApiDto> {
+  const res = await fetch(`${CHAT_BASE_URL}/conversations`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ studentId }),
+  });
+  return parseJson<ConversationApiDto>(res);
 }
 
-export async function markConversationRead(conversationId: string): Promise<void> {
-  conversations = conversations.map((conversation) =>
-    conversation.id === conversationId ? { ...conversation, unreadCount: 0 } : conversation,
-  );
-  return delay(undefined, 0);
+export async function uploadAttachment(file: File): Promise<UploadedAttachmentDto> {
+  const formData = new FormData();
+  formData.append('file', file);
+  const res = await fetch(`${CHAT_BASE_URL}/attachments`, { method: 'POST', body: formData });
+  return parseJson<UploadedAttachmentDto>(res);
 }
 
 export async function sendMessage(
   conversationId: string,
   payload: SendMessagePayload,
 ): Promise<MessageApiDto> {
-  const attachments = (payload.files ?? []).map((file, index) => ({
-    id: `att-${nextMessageSeq}-${index}`,
-    kind: inferAttachmentKind(file),
-    name: file.name,
-    url: URL.createObjectURL(file),
-    sizeLabel: formatFileSize(file.size),
-  }));
+  const attachments: MessageAttachment[] = await Promise.all(
+    (payload.files ?? []).map(async (file) => ({
+      id: crypto.randomUUID(),
+      ...(await uploadAttachment(file)),
+    })),
+  );
 
-  const message: MessageApiDto = {
-    id: `msg-${nextMessageSeq++}`,
-    conversationId,
-    sender: 'admin',
-    text: payload.text?.trim() || null,
-    attachments,
-    sentAt: new Date().toISOString(),
-  };
-
-  messages = [...messages, message];
-  return delay(message);
+  const res = await fetch(`${CHAT_BASE_URL}/conversations/${conversationId}/messages`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ text: payload.text, attachments }),
+  });
+  return parseJson<MessageApiDto>(res);
 }
 
-export async function startConversation(participant: ChatParticipant): Promise<ConversationApiDto> {
-  const existing = conversations.find(
-    (conversation) => conversation.participant.studentDbId === participant.studentDbId,
-  );
-  if (existing) return delay(existing);
+export async function markConversationRead(conversationId: string): Promise<void> {
+  const res = await fetch(`${CHAT_BASE_URL}/conversations/${conversationId}/read`, {
+    method: 'PATCH',
+  });
+  return assertOk(res);
+}
 
-  const created: ConversationApiDto = {
-    id: `conv-new-${participant.studentDbId}`,
-    participant,
-    lastMessage: null,
-    unreadCount: 0,
-  };
-  conversations = [...conversations, created];
-  return delay(created);
+export async function clearConversation(conversationId: string): Promise<void> {
+  const res = await fetch(`${CHAT_BASE_URL}/conversations/${conversationId}/messages`, {
+    method: 'DELETE',
+  });
+  return assertOk(res);
+}
+
+export async function listActiveStudents(): Promise<StudentSummaryDto[]> {
+  const res = await fetch(`${config.apiUrl}/api/v1/students?status=active`);
+  return parseJson<StudentSummaryDto[]>(res);
 }

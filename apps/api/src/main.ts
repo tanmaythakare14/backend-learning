@@ -1,10 +1,15 @@
 import 'reflect-metadata';
+import express from 'express';
 import { NestFactory } from '@nestjs/core';
 import { Logger } from '@nestjs/common';
 import { SwaggerModule, DocumentBuilder } from '@nestjs/swagger';
 import { AppModule } from './app.module';
 import { errorHandler, notFoundHandler } from './common/middleware/error-handler.middleware';
 import { logger } from './common/utils/logger';
+import {
+  CHAT_UPLOADS_DIR,
+  CHAT_UPLOADS_URL_PREFIX,
+} from './domains/chat/utils/attachment-storage.util';
 
 async function bootstrap(): Promise<void> {
   const app = await NestFactory.create(AppModule, {
@@ -38,6 +43,11 @@ async function bootstrap(): Promise<void> {
     },
     credentials: true,
   });
+
+  // Serve uploaded chat attachments — deliberately outside the /api/v1 prefix
+  // (setGlobalPrefix only applies to Nest controller routes, not raw
+  // middleware attached directly to the underlying Express instance).
+  app.getHttpAdapter().getInstance().use(CHAT_UPLOADS_URL_PREFIX, express.static(CHAT_UPLOADS_DIR));
 
   // Swagger docs
   if (process.env.NODE_ENV !== 'production') {

@@ -56,6 +56,24 @@ export interface SendMessagePayload {
   files?: File[];
 }
 
+/** Minimal shape read off GET /students for the "start a new chat" picker — this
+ * module owns its own fetch rather than importing student-management's service,
+ * per the "no cross-module imports" rule. */
+export interface StudentSummaryDto {
+  id: string;
+  studentId: string;
+  firstName: string;
+  lastName: string;
+  course: string;
+}
+
+export interface UploadedAttachmentDto {
+  kind: AttachmentKind;
+  name: string;
+  url: string;
+  sizeLabel: string;
+}
+
 // Component props
 export interface ConversationListPanelProps {
   conversations: Conversation[];
