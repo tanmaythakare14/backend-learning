@@ -14,17 +14,12 @@ export class User {
   @Column({ type: 'varchar', length: 255 })
   email!: string;
 
-  @Column({ type: 'varchar', length: 255, name: 'password_hash' })
-  passwordHash!: string;
-
   @Column({ type: 'boolean', name: 'is_active', default: true })
   isActive!: boolean;
 
-  @Column({ type: 'varchar', length: 255, name: 'password_reset_token_hash', nullable: true })
-  passwordResetTokenHash!: string | null;
-
-  @Column({ type: 'timestamptz', name: 'password_reset_expires_at', nullable: true })
-  passwordResetExpiresAt!: Date | null;
+  /** Auth0's stable subject claim (e.g. "auth0|..." or "google-oauth2|...") — the identity key. */
+  @Column({ type: 'varchar', length: 255, name: 'auth0_sub' })
+  auth0Sub!: string;
 
   @Column({ type: 'timestamptz', name: 'created_at', default: () => 'NOW()' })
   createdAt!: Date;

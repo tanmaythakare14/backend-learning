@@ -10,7 +10,6 @@ import {
   REGISTER,
 } from 'redux-persist';
 import { secureLocalStorage } from '../utils/secureStorage';
-import authReducer from './slices/authSlice';
 
 /**
  * Secure storage adapter for redux-persist
@@ -62,7 +61,6 @@ const sampleReducer = (state = { count: 0 }, action: { type: string; payload?: u
 const rootReducer = combineReducers({
   // Add your feature slices here
   sample: sampleReducer,
-  auth: authReducer,
 });
 
 const persistedReducer = persistReducer(persistConfig, rootReducer);

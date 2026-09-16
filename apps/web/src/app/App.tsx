@@ -1,27 +1,22 @@
 import { Navigate, Route, Routes } from 'react-router-dom';
 import type { JSX, ReactNode } from 'react';
-import {
-  CreateAccountScreen,
-  SignInScreen,
-  ForgotPasswordScreen,
-  ResetPasswordScreen,
-} from '../modules/onboarding';
+import { useAuth0 } from '@auth0/auth0-react';
+import { SignInScreen } from '../modules/onboarding';
 import { StudentManagementScreen, StudentDetailScreen } from '../modules/student-management';
 import { MessageScreen } from '../modules/message';
 import { CourseManagementScreen } from '../modules/course-management';
 import { AppShell } from '../components/layouts';
 import { Toaster } from '../components/ui/sonner';
 import { ProtectedRoute } from '../components/ProtectedRoute';
-import { useAppSelector } from '../store/hooks';
-import { selectCurrentUser } from '../store/slices/authSlice';
+import { AuthTokenBridge } from '../components/AuthTokenBridge';
 
 function AuthenticatedShell({ children }: { children: ReactNode }): JSX.Element {
-  const user = useAppSelector(selectCurrentUser);
+  const { user } = useAuth0();
 
   return (
     <AppShell
       user={{
-        fullName: user ? `${user.firstName} ${user.lastName}` : 'Signed-in user',
+        fullName: user?.name ?? 'Signed-in user',
         email: user?.email ?? '',
       }}
     >
@@ -45,12 +40,10 @@ function App() {
   return (
     <>
       <Toaster />
+      <AuthTokenBridge />
       <Routes>
-        <Route path="/" element={<Navigate to="/register" replace />} />
-        <Route path="/register" element={<CreateAccountScreen />} />
+        <Route path="/" element={<Navigate to="/login" replace />} />
         <Route path="/login" element={<SignInScreen />} />
-        <Route path="/forgot-password" element={<ForgotPasswordScreen />} />
-        <Route path="/reset-password" element={<ResetPasswordScreen />} />
 
         <Route element={<ProtectedRoute />}>
           <Route path="/dashboard" element={<PlaceholderPage title="Dashboard" />} />

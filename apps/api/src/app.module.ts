@@ -1,4 +1,5 @@
 import { Module, NestModule, MiddlewareConsumer } from '@nestjs/common';
+import { APP_GUARD } from '@nestjs/core';
 import { ConfigModule } from '@nestjs/config';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import AppDataSource from './config/data-source';
@@ -10,6 +11,7 @@ import { CourseModule } from './domains/course/course.module';
 import { ExampleModule } from './domains/example/example.module';
 import { LoggingModule } from './common/logging.module';
 import { AuditMiddleware } from './common/middleware/audit.middleware';
+import { JwtAuthGuard } from './common/guards/jwt-auth.guard';
 
 @Module({
   imports: [
@@ -35,6 +37,7 @@ import { AuditMiddleware } from './common/middleware/audit.middleware';
     // collision, just triggered by a different route this time.
     ExampleModule,
   ],
+  providers: [{ provide: APP_GUARD, useClass: JwtAuthGuard }],
 })
 export class AppModule implements NestModule {
   configure(consumer: MiddlewareConsumer): void {

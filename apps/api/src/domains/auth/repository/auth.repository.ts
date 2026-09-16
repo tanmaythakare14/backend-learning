@@ -3,11 +3,11 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { User } from '../entities/user.entity';
 
-interface CreateUserData {
+interface UpsertProfileData {
+  auth0Sub: string;
+  email: string;
   firstName: string;
   lastName: string;
-  email: string;
-  passwordHash: string;
 }
 
 @Injectable()
@@ -17,36 +17,23 @@ export class AuthRepository {
     private readonly repository: Repository<User>,
   ) {}
 
-  async findByEmail(email: string): Promise<User | null> {
-    return this.repository.findOne({ where: { email } });
+  async findByAuth0Sub(auth0Sub: string): Promise<User | null> {
+    return this.repository.findOne({ where: { auth0Sub } });
   }
 
-  async create(data: CreateUserData): Promise<User> {
-    const user = this.repository.create({ ...data, isActive: true });
-    return this.repository.save(user);
-  }
+  /** Just-in-time provisioning: creates the profile row on first sight of a `sub`, refreshes it otherwise. */
+  async upsertFromAuth0(data: UpsertProfileData): Promise<User> {
+    const existing = await this.findByAuth0Sub(data.auth0Sub);
+    if (existing) {
+      await this.repository.update(existing.id, {
+        email: data.email,
+        firstName: data.firstName,
+        lastName: data.lastName,
+      });
+      return { ...existing, ...data };
+    }
 
-  async setPasswordResetToken(userId: string, tokenHash: string, expiresAt: Date): Promise<void> {
-    await this.repository.update(userId, {
-      passwordResetTokenHash: tokenHash,
-      passwordResetExpiresAt: expiresAt,
-    });
-  }
-
-  /** Only matches a token that hasn't expired — an expired or unknown hash returns null. */
-  async findByValidResetToken(tokenHash: string): Promise<User | null> {
-    return this.repository
-      .createQueryBuilder('user')
-      .where('user.password_reset_token_hash = :tokenHash', { tokenHash })
-      .andWhere('user.password_reset_expires_at > :now', { now: new Date() })
-      .getOne();
-  }
-
-  async resetPassword(userId: string, passwordHash: string): Promise<void> {
-    await this.repository.update(userId, {
-      passwordHash,
-      passwordResetTokenHash: null,
-      passwordResetExpiresAt: null,
-    });
+    const created = this.repository.create({ ...data, isActive: true });
+    return this.repository.save(created);
   }
 }

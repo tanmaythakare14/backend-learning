@@ -1,32 +1,18 @@
-export interface PasswordStrengthFieldProps {
-  password: string;
-}
-
 export interface OnboardingLeftPanelProps {
   className?: string;
 }
 
-export interface RegisterAccountPayload {
+/** Sent once after Auth0 login to keep the local profile row in sync. */
+export interface SyncProfilePayload {
+  email: string;
   firstName: string;
   lastName: string;
-  email: string;
-  password: string;
 }
 
-export interface RegisterAccountResponse {
+export interface SyncProfileResponse {
   id: string;
   firstName: string;
   lastName: string;
   email: string;
   createdAt: string;
-}
-
-export interface LoginPayload {
-  email: string;
-  password: string;
-}
-
-export interface LoginResponse {
-  token: string;
-  user: RegisterAccountResponse;
 }

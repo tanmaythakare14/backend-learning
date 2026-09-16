@@ -1,5 +1,6 @@
 import { config } from '@/config/environment';
 import { handleHttpError } from '@/utils/apiError';
+import { authHeaders } from '@/utils/httpHeaders';
 import type {
   CourseApiDto,
   CourseStatus,
@@ -28,14 +29,14 @@ async function assertOk(res: Response): Promise<void> {
 export async function listCourses(status: CourseStatus): Promise<CourseApiDto[]> {
   const url = new URL(COURSES_BASE_URL);
   url.searchParams.set('status', status);
-  const res = await fetch(url.toString());
+  const res = await fetch(url.toString(), { headers: await authHeaders() });
   return parseJson<CourseApiDto[]>(res);
 }
 
 export async function createCourse(payload: CreateCoursePayload): Promise<CourseApiDto> {
   const res = await fetch(COURSES_BASE_URL, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: await authHeaders({ 'Content-Type': 'application/json' }),
     body: JSON.stringify(payload),
   });
   return parseJson<CourseApiDto>(res);
@@ -47,7 +48,7 @@ export async function updateCourse(
 ): Promise<CourseApiDto> {
   const res = await fetch(`${COURSES_BASE_URL}/${id}`, {
     method: 'PUT',
-    headers: { 'Content-Type': 'application/json' },
+    headers: await authHeaders({ 'Content-Type': 'application/json' }),
     body: JSON.stringify(payload),
   });
   return parseJson<CourseApiDto>(res);
@@ -56,13 +57,16 @@ export async function updateCourse(
 export async function updateCourseStatus(id: string, status: CourseStatus): Promise<CourseApiDto> {
   const res = await fetch(`${COURSES_BASE_URL}/${id}/status`, {
     method: 'PATCH',
-    headers: { 'Content-Type': 'application/json' },
+    headers: await authHeaders({ 'Content-Type': 'application/json' }),
     body: JSON.stringify({ status }),
   });
   return parseJson<CourseApiDto>(res);
 }
 
 export async function deleteCourse(id: string): Promise<void> {
-  const res = await fetch(`${COURSES_BASE_URL}/${id}`, { method: 'DELETE' });
+  const res = await fetch(`${COURSES_BASE_URL}/${id}`, {
+    method: 'DELETE',
+    headers: await authHeaders(),
+  });
   return assertOk(res);
 }

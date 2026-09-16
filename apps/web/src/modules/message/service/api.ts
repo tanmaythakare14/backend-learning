@@ -1,5 +1,6 @@
 import { config } from '@/config/environment';
 import { handleHttpError } from '@/utils/apiError';
+import { authHeaders } from '@/utils/httpHeaders';
 import type {
   ConversationApiDto,
   MessageApiDto,
@@ -28,19 +29,21 @@ async function assertOk(res: Response): Promise<void> {
 }
 
 export async function listConversations(): Promise<ConversationApiDto[]> {
-  const res = await fetch(`${CHAT_BASE_URL}/conversations`);
+  const res = await fetch(`${CHAT_BASE_URL}/conversations`, { headers: await authHeaders() });
   return parseJson<ConversationApiDto[]>(res);
 }
 
 export async function listMessages(conversationId: string): Promise<MessageApiDto[]> {
-  const res = await fetch(`${CHAT_BASE_URL}/conversations/${conversationId}/messages`);
+  const res = await fetch(`${CHAT_BASE_URL}/conversations/${conversationId}/messages`, {
+    headers: await authHeaders(),
+  });
   return parseJson<MessageApiDto[]>(res);
 }
 
 export async function startConversation(studentId: string): Promise<ConversationApiDto> {
   const res = await fetch(`${CHAT_BASE_URL}/conversations`, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: await authHeaders({ 'Content-Type': 'application/json' }),
     body: JSON.stringify({ studentId }),
   });
   return parseJson<ConversationApiDto>(res);
@@ -49,7 +52,11 @@ export async function startConversation(studentId: string): Promise<Conversation
 export async function uploadAttachment(file: File): Promise<UploadedAttachmentDto> {
   const formData = new FormData();
   formData.append('file', file);
-  const res = await fetch(`${CHAT_BASE_URL}/attachments`, { method: 'POST', body: formData });
+  const res = await fetch(`${CHAT_BASE_URL}/attachments`, {
+    method: 'POST',
+    headers: await authHeaders(),
+    body: formData,
+  });
   return parseJson<UploadedAttachmentDto>(res);
 }
 
@@ -66,7 +73,7 @@ export async function sendMessage(
 
   const res = await fetch(`${CHAT_BASE_URL}/conversations/${conversationId}/messages`, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: await authHeaders({ 'Content-Type': 'application/json' }),
     body: JSON.stringify({ text: payload.text, attachments }),
   });
   return parseJson<MessageApiDto>(res);
@@ -75,6 +82,7 @@ export async function sendMessage(
 export async function markConversationRead(conversationId: string): Promise<void> {
   const res = await fetch(`${CHAT_BASE_URL}/conversations/${conversationId}/read`, {
     method: 'PATCH',
+    headers: await authHeaders(),
   });
   return assertOk(res);
 }
@@ -82,11 +90,14 @@ export async function markConversationRead(conversationId: string): Promise<void
 export async function clearConversation(conversationId: string): Promise<void> {
   const res = await fetch(`${CHAT_BASE_URL}/conversations/${conversationId}/messages`, {
     method: 'DELETE',
+    headers: await authHeaders(),
   });
   return assertOk(res);
 }
 
 export async function listActiveStudents(): Promise<StudentSummaryDto[]> {
-  const res = await fetch(`${config.apiUrl}/api/v1/students?status=active`);
+  const res = await fetch(`${config.apiUrl}/api/v1/students?status=active`, {
+    headers: await authHeaders(),
+  });
   return parseJson<StudentSummaryDto[]>(res);
 }

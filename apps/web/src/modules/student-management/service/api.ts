@@ -1,5 +1,6 @@
 import { config } from '@/config/environment';
 import { handleHttpError } from '@/utils/apiError';
+import { authHeaders } from '@/utils/httpHeaders';
 import type {
   StudentApiDto,
   CreateStudentPayload,
@@ -18,7 +19,7 @@ export async function listStudents(params: ListStudentsParams): Promise<StudentA
     url.searchParams.set('search', params.search);
   }
 
-  const res = await fetch(url.toString());
+  const res = await fetch(url.toString(), { headers: await authHeaders() });
   const body: { data?: StudentApiDto[]; message?: string } | undefined = await res
     .json()
     .catch(() => undefined);
@@ -31,7 +32,9 @@ export async function listStudents(params: ListStudentsParams): Promise<StudentA
 }
 
 export async function getStudent(id: string): Promise<StudentApiDto> {
-  const res = await fetch(`${config.apiUrl}/api/v1/students/${id}`);
+  const res = await fetch(`${config.apiUrl}/api/v1/students/${id}`, {
+    headers: await authHeaders(),
+  });
   const body: { data?: StudentApiDto; message?: string } | undefined = await res
     .json()
     .catch(() => undefined);
@@ -46,7 +49,7 @@ export async function getStudent(id: string): Promise<StudentApiDto> {
 export async function createStudent(payload: CreateStudentPayload): Promise<StudentApiDto> {
   const res = await fetch(`${config.apiUrl}/api/v1/students`, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: await authHeaders({ 'Content-Type': 'application/json' }),
     body: JSON.stringify(payload),
   });
 
@@ -67,7 +70,7 @@ export async function updateStudent(
 ): Promise<StudentApiDto> {
   const res = await fetch(`${config.apiUrl}/api/v1/students/${id}`, {
     method: 'PUT',
-    headers: { 'Content-Type': 'application/json' },
+    headers: await authHeaders({ 'Content-Type': 'application/json' }),
     body: JSON.stringify(payload),
   });
 
@@ -88,7 +91,7 @@ export async function updateStudentStatus(
 ): Promise<StudentApiDto> {
   const res = await fetch(`${config.apiUrl}/api/v1/students/${id}/status`, {
     method: 'PATCH',
-    headers: { 'Content-Type': 'application/json' },
+    headers: await authHeaders({ 'Content-Type': 'application/json' }),
     body: JSON.stringify({ status }),
   });
 
@@ -109,7 +112,7 @@ export async function listActiveCourseNames(): Promise<string[]> {
   const url = new URL(`${config.apiUrl}/api/v1/courses`);
   url.searchParams.set('status', 'active');
 
-  const res = await fetch(url.toString());
+  const res = await fetch(url.toString(), { headers: await authHeaders() });
   const body: { data?: CourseSummaryDto[]; message?: string } | undefined = await res
     .json()
     .catch(() => undefined);
@@ -122,7 +125,10 @@ export async function listActiveCourseNames(): Promise<string[]> {
 }
 
 export async function deleteStudent(id: string): Promise<StudentApiDto> {
-  const res = await fetch(`${config.apiUrl}/api/v1/students/${id}`, { method: 'DELETE' });
+  const res = await fetch(`${config.apiUrl}/api/v1/students/${id}`, {
+    method: 'DELETE',
+    headers: await authHeaders(),
+  });
 
   const body: { data?: StudentApiDto; message?: string } | undefined = await res
     .json()

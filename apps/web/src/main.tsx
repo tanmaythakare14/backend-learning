@@ -6,15 +6,18 @@ import { BrowserRouter } from 'react-router-dom';
 import './index.css';
 import App from './app/App';
 import { store, persistor } from './store';
+import { Auth0ProviderWithNavigate } from './components/Auth0ProviderWithNavigate';
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
-    <Provider store={store}>
-      <PersistGate loading={null} persistor={persistor}>
-        <BrowserRouter>
-          <App />
-        </BrowserRouter>
-      </PersistGate>
-    </Provider>
+    <BrowserRouter>
+      <Auth0ProviderWithNavigate>
+        <Provider store={store}>
+          <PersistGate loading={null} persistor={persistor}>
+            <App />
+          </PersistGate>
+        </Provider>
+      </Auth0ProviderWithNavigate>
+    </BrowserRouter>
   </StrictMode>,
 );

@@ -4,9 +4,11 @@ import { Request, Response } from 'express';
 import { HttpStatus } from '../../../common/constants/http-status.constants';
 import { SuccessMessages } from '../../../common/constants/success-messages.constants';
 import { generateResponse } from '../../../common/utils/response.util';
+import { Public } from '../../../common/decorators/public.decorator';
 
 @ApiTags('Health')
 @Controller()
+@Public()
 export class HealthCheckController {
   @Get()
   @ApiOperation({ summary: 'Check API health status' })
