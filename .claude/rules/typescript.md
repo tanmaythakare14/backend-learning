@@ -9,8 +9,8 @@ Never use `any`. If the shape is unknown, use `unknown` and narrow it.
 function parseApiResponse(data: any) { ... }
 
 // Correct
-function parseApiResponse(data: unknown): PatientDTO {
-  if (!isPatientDTO(data)) throw new Error('Invalid patient data');
+function parseApiResponse(data: unknown): StudentApiDto {
+  if (!isStudentApiDto(data)) throw new Error('Invalid student data');
   return data;
 }
 ```
@@ -20,14 +20,14 @@ function parseApiResponse(data: unknown): PatientDTO {
 Every module has a single `@types/index.ts` file. All interfaces, types, and enums for that module go there. Never define interfaces inline in component files or API files.
 
 ```ts
-// Wrong — inline interface in PatientList.tsx
+// Wrong — inline interface in StudentTable.tsx
 interface Props {
-  patients: Array<{ id: string; name: string }>;
+  students: Array<{ id: string; name: string }>;
 }
 
 // Correct — in @types/index.ts
-export interface PatientListProps {
-  patients: PatientListItem[];
+export interface StudentTableProps {
+  students: Student[];
 }
 ```
 
@@ -35,12 +35,12 @@ export interface PatientListProps {
 
 ```ts
 // Correct
-export function formatPatientName(patient: PatientDTO): string { ... }
-export async function listPatients(params: PatientListParams): Promise<PatientListResponse> { ... }
-export function PatientList({ patients }: PatientListProps): JSX.Element { ... }
+export function formatStudentName(student: Student): string { ... }
+export async function listStudents(params: ListStudentsParams): Promise<StudentApiDto[]> { ... }
+export function StudentTable({ students }: StudentTableProps): JSX.Element { ... }
 
 // Wrong — relying on inference for public API
-export function formatPatientName(patient: PatientDTO) { ... }
+export function formatStudentName(student: Student) { ... }
 ```
 
 Internal (non-exported) helper functions may rely on inference if the return type is obvious.
@@ -51,19 +51,18 @@ Derive form value types from the Zod schema — never define them separately:
 
 ```ts
 // Correct
-const enrollPatientSchema = z.object({
+const studentFormSchema = z.object({
   firstName: z.string().min(1),
   lastName: z.string().min(1),
-  mrn: z.string().min(1),
-  dateOfBirth: z.string(),
-  gender: z.enum(['MALE', 'FEMALE', 'OTHER']),
-  email: z.string().email().optional(),
+  email: z.string().email(),
+  phone: z.string().min(10),
+  course: z.string().min(1),
 });
 
-type EnrollPatientFormValues = z.infer<typeof enrollPatientSchema>;
+type StudentFormValues = z.infer<typeof studentFormSchema>;
 
 // Wrong — duplicate type definition
-interface EnrollPatientFormValues {
+interface StudentFormValues {
   firstName: string;
   lastName: string;
   // ...
@@ -72,61 +71,60 @@ interface EnrollPatientFormValues {
 
 ## Optional API fields
 
-Fields that may be absent in API responses must be typed as optional — never assume they are present:
+Fields that may be absent in API responses must be typed as optional (or nullable, matching what the API actually sends) — never assume they are present:
 
 ```ts
-// Correct — reflects reality that API may not return these
-export interface PatientDTO {
+// Correct — reflects reality that the API returns these address fields as null when unset
+export interface StudentApiDto {
   id: string;
-  mrn: string;
+  studentId: string;
   firstName: string;
   lastName: string;
-  email?: string; // optional in API
-  phone?: string; // optional in API
-  secondaryInsurance?: InsuranceDTO;
+  email: string;
+  phone: string;
+  streetAddress: string | null;
+  city: string | null;
 }
 
 // Wrong — assuming always present
-export interface PatientDTO {
-  email: string; // will cause runtime errors
+export interface StudentApiDto {
+  streetAddress: string; // will cause runtime errors
 }
 ```
 
 ## No non-null assertions on API data
 
 ```ts
-// Wrong — crashes if email is undefined
-const email = patient.email!;
+// Wrong — crashes if streetAddress is null
+const street = dto.streetAddress!;
 
-// Correct — handle the undefined case
-const email = patient.email ?? '—';
-const email = patient.email || 'Not provided';
+// Correct — handle the null/undefined case
+const street = dto.streetAddress ?? undefined;
+const street = dto.streetAddress || 'Not provided';
 ```
 
 ## Redux slice state must have an explicit interface
 
 ```ts
 // Correct
-interface AuthState {
-  user: AuthUser | null;
-  token: string | null;
-  isLoading: boolean;
-  error: string | null;
+interface UiState {
+  sidebarOpen: boolean;
+  activeModal: string | null;
 }
 
-const initialState: AuthState = {
-  user: null,
-  token: null,
-  isLoading: false,
-  error: null,
+const initialState: UiState = {
+  sidebarOpen: true,
+  activeModal: null,
 };
 
-const authSlice = createSlice({
-  name: 'auth',
+const uiSlice = createSlice({
+  name: 'ui',
   initialState,
   reducers: { ... },
 });
 ```
+
+Note: this project's auth is Auth0-based, not a Redux `authSlice` — see [state.md](state.md).
 
 ## Discriminated unions for multi-state UI
 
@@ -144,7 +142,7 @@ type AsyncState<T> =
 interface ComponentState {
   isLoading: boolean;
   isError: boolean;
-  data: PatientDTO | null;
+  data: Student | null;
   error: string | null;
 }
 ```
@@ -153,40 +151,44 @@ interface ComponentState {
 
 ```ts
 // Correct
-export const PROGRAM_TYPE = {
-  RPM: 'RPM',
-  APCM: 'APCM',
+export const STUDENT_STATUS = {
+  ACTIVE: 'active',
+  DEACTIVATED: 'deactivated',
+  DELETED: 'deleted',
 } as const;
 
-export type ProgramType = (typeof PROGRAM_TYPE)[keyof typeof PROGRAM_TYPE];
+export type StudentStatus = (typeof STUDENT_STATUS)[keyof typeof STUDENT_STATUS];
 
 // Avoid TypeScript enum keyword — it generates runtime code
-enum ProgramType {
-  RPM,
-  APCM,
+enum StudentStatus {
+  Active,
+  Deactivated,
 } // Wrong
 ```
 
 ## Type guards for narrowing
 
 ```ts
-function isPatientDTO(value: unknown): value is PatientDTO {
+function isStudentApiDto(value: unknown): value is StudentApiDto {
   return (
     typeof value === 'object' &&
     value !== null &&
     'id' in value &&
-    'mrn' in value &&
+    'studentId' in value &&
     'firstName' in value
   );
 }
 ```
 
-## No `as` casting on raw API responses
+## Casting API responses
+
+Prefer validating (or at least type-guarding) the actual DTO rather than casting it blind. The one narrow exception already used in this codebase's `service/api.ts` files: after checking `res.ok`, the *response envelope* (`{ data: T }`) is cast, because that shape is a fixed backend contract, not user-controlled data — the DTO fields themselves aren't asserted beyond that.
 
 ```ts
-// Wrong — bypasses type safety
-const patient = responseBody as PatientDTO;
+// Acceptable — casting the known envelope shape after res.ok, matching existing api.ts files
+if (!res.ok) handleHttpError(res.status, body);
+return (body as { data: StudentApiDto[] }).data;
 
-// Correct — validate first
-const patient = parsePatientDTO(responseBody); // throws if invalid
+// Wrong — casting an entire untrusted payload with no res.ok check or shape guarantee
+const student = responseBody as StudentApiDto;
 ```

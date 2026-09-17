@@ -2,7 +2,7 @@
 
 ## Every feature lives in `src/modules/<feature-name>/`
 
-Never place business logic, API calls, or feature-specific types anywhere outside a module folder. The `src/` root and `src/components/` are for shared, cross-cutting code only.
+Never place business logic, API calls, or feature-specific types anywhere outside a module folder. The `src/` root and `src/components/` are for shared, cross-cutting code only. Existing modules: `course-management`, `student-management`, `message`, `onboarding`.
 
 ## Required folder structure per module
 
@@ -12,14 +12,13 @@ src/modules/<feature>/
 │   └── index.ts          # ALL TypeScript interfaces for this module
 ├── components/
 │   ├── index.ts          # Barrel: re-exports everything from sub-folders
-│   ├── list/             # Table/list view of the feature
-│   ├── detail/           # Read-only detail/overview view
-│   ├── form/             # Create or edit form (single-step)
-│   └── management/       # Container that routes between list/form/detail
+│   └── <sub-folders>/    # One folder per screen/concern — name by domain, not a fixed template
+│                          #   (e.g. student-management has student-table/, student-form/,
+│                          #   detail/, course-filter/ — not a rigid list/detail/form/management set)
 ├── service/
 │   ├── index.ts          # export * from './api'; export * from './mapper';
 │   ├── api.ts            # All fetch/HTTP calls for this feature
-│   └── mapper.ts         # DTO ↔ FormView ↔ ListItem transformations
+│   └── mapper.ts         # DTO ↔ FormView ↔ domain-shape transformations
 ├── constants/
 │   └── index.ts          # Route paths, select options, named status constants
 ├── utils/
@@ -28,40 +27,35 @@ src/modules/<feature>/
 └── index.ts              # Minimal public API — only what router/pages consume
 ```
 
+Don't force a component sub-folder into `list/detail/form/management` naming if a more specific domain name is clearer — the point is one folder per distinct screen/concern with its own barrel `index.ts`, not the exact label.
+
 ## Multi-step forms get a `steps/` sub-folder
 
-For flows like patient enrollment (5 steps) or onboarding:
+For flows like a multi-step onboarding or enrollment wizard:
 
 ```
 components/
 └── enrollment/
-    ├── EnrollPatient.tsx      # Stepper orchestrator
+    ├── EnrollmentWizard.tsx   # Stepper orchestrator
     ├── steps/
-    │   ├── DemographicsStep.tsx
-    │   ├── InsuranceStep.tsx
-    │   ├── EmergencyContactStep.tsx
-    │   ├── ClinicalDetailsStep.tsx
-    │   └── ConsentStep.tsx
+    │   ├── DetailsStep.tsx
+    │   ├── ContactStep.tsx
+    │   └── ReviewStep.tsx
     └── index.ts
 ```
 
 ## Tabbed detail views get a `tabs/` sub-folder
 
-For patient detail with 8 tabs:
+For a detail screen with several tabs (e.g. a student or course detail with activity, documents, notes):
 
 ```
 components/
 └── detail/
-    ├── PatientDetail.tsx      # Tab container
+    ├── StudentDetail.tsx      # Tab container
     ├── tabs/
-    │   ├── vitals/
-    │   ├── medications/
-    │   ├── care-plan/
-    │   ├── programs-devices/
+    │   ├── overview/
     │   ├── activity-log/
-    │   ├── billing/
-    │   ├── appointments/
-    │   └── tasks/
+    │   └── documents/
     └── index.ts
 ```
 
@@ -71,59 +65,71 @@ components/
 
 **Service layer** (`service/`): Data fetching only. No JSX, no rendering logic, no React imports. Returns typed Promises.
 
-**State layer** (`src/store/slices/`): Redux slices for auth and global UI state. Never put API response data in Redux — use component-local state.
+**State layer** (`src/store/slices/`): Redux slices for global UI state only (see [state.md](state.md) — auth is handled by Auth0, not a Redux slice, in this project). Never put API response data in Redux — use component-local state.
 
 ## `service/index.ts` pattern
 
 ```ts
-// service/index.ts — exactly this, nothing else
+// service/index.ts — exactly this, plus any extra service files the module needs
 export * from './api';
 export * from './mapper';
 ```
 
 ## `@types/index.ts` pattern
 
-All interfaces for the module live here — DTOs (from API), FormView (for forms), ListItem (for tables), and component Props.
+All interfaces for the module live here — DTOs (from API), FormView (for forms), domain/list shapes, and component Props.
 
 ```ts
-// DTO — shape from the API response
-export interface PatientDTO {
+// DTO — raw shape from the API response
+export interface StudentApiDto {
   id: string;
-  mrn: string;
+  studentId: string;
   firstName: string;
   lastName: string;
-  dateOfBirth: string; // ISO string from API
-  gender: 'MALE' | 'FEMALE' | 'OTHER';
-  email?: string;
-  phone?: string;
-}
-
-// ListItem — shape used in the data table row
-export interface PatientListItem {
-  id: string;
-  mrn: string;
-  fullName: string;
-  dateOfBirth: string;
-  gender: string;
   email: string;
   phone: string;
-  pcpName: string;
+  course: string;
+  status: StudentStatus;
+  assignedOn: string;
+  streetAddress: string | null;
+  city: string | null;
+  state: string | null;
+  zipCode: string | null;
+  country: string | null;
+}
+
+// Domain shape — used through the UI once mapped from the DTO
+export interface Student {
+  id: string;
+  studentId: string;
+  firstName: string;
+  lastName: string;
+  email: string;
+  phone: string;
+  course: string;
+  status: StudentStatus;
+  assignedOn: string;
+  address: StudentAddress;
 }
 
 // FormView — shape used in RHF + Zod forms
-export interface PatientEnrollmentFormView {
+export interface StudentFormValues {
   firstName: string;
   lastName: string;
-  mrn: string;
-  dateOfBirth: string;
-  gender: string;
   email: string;
   phone: string;
+  course: string;
+  street: string;
+  country: string;
+  state: string;
+  city: string;
+  zipCode: string;
 }
 
 // Component props
-export interface PatientListProps {
-  onEnroll: () => void;
+export interface StudentTableProps {
+  students: Student[];
+  onEdit: (student: Student) => void;
 }
 ```
 
@@ -132,15 +138,12 @@ export interface PatientListProps {
 Only export what the router or page-level components need to consume. Do not export internal sub-components or service functions from the module root.
 
 ```ts
-// Good — exposes only the entry-point components + route constants
-export { PatientList } from './components/list/PatientList';
-export { PatientDetail } from './components/detail/PatientDetail';
-export { EnrollPatient } from './components/enrollment/EnrollPatient';
-export { PATIENT_BASE_PATH, PATIENT_DETAIL_PATH } from './constants';
+// Good — exposes only the entry-point components (matches student-management/index.ts)
+export { StudentManagementScreen, StudentDetailScreen } from './components';
 
 // Wrong — never export internals from the module root
-export { PatientRowActions } from './components/list/PatientRowActions';
-export { patientApi } from './service/api';
+export { StudentRowActions } from './components/student-table/StudentRowActions';
+export { listStudents } from './service/api';
 ```
 
 ## Barrel index pattern inside components
@@ -148,45 +151,44 @@ export { patientApi } from './service/api';
 Each sub-folder must have its own `index.ts`:
 
 ```ts
-// components/list/index.ts
-export { PatientList } from './PatientList';
-export { PatientListHeader } from './PatientListHeader';
-export { PatientRowActions } from './PatientRowActions';
+// components/student-table/index.ts
+export { StudentTable } from './StudentTable';
+export { StudentRowActions } from './StudentRowActions';
 
 // components/index.ts
-export * from './list';
+export * from './student-table';
+export * from './student-form';
 export * from './detail';
-export * from './enrollment';
 ```
 
 ## No cross-module imports
 
-Never import from another module's internals:
+Never import another module's internals (service, components, or types) directly:
 
 ```ts
 // Wrong
-import { patientApi } from '@/modules/patient/service/api'; // inside billing module
+import { listCourses } from '@/modules/course-management/service/api'; // inside student-management
 
-// Correct — shared logic belongs in src/hooks/ or src/utils/
-import { formatPatientName } from '@/utils/patient';
+// Correct — if a module needs a small slice of another domain's data (e.g. the course
+// dropdown on the student form), it defines its own minimal type and fetches it itself
+// rather than importing course-management's service. See student-management's
+// CourseSummaryDto in @types/index.ts for the existing example of this.
+
+// Shared, non-domain logic belongs in src/hooks/ or src/utils/
+import { formatFullName } from '@/utils/name';
 ```
 
 ## Constants pattern
 
 ```ts
 // constants/index.ts
-export const PATIENT_BASE_PATH = '/patients';
-export const PATIENT_DETAIL_PATH = '/patients/:id';
-export const PATIENT_ENROLL_PATH = '/patients/enroll';
+export const STUDENT_LIST_PATH = '/students';
 
-export const GENDER_OPTIONS = [
-  { value: 'MALE', label: 'Male' },
-  { value: 'FEMALE', label: 'Female' },
-  { value: 'OTHER', label: 'Other' },
-] as const;
+export const STUDENT_STATUS_TABS: Array<{ value: StudentStatus; label: string }> = [
+  { value: 'active', label: 'Active Students' },
+  { value: 'deactivated', label: 'Deactivated Students' },
+  { value: 'deleted', label: 'Deleted Students' },
+];
 
-export const PROGRAM_TYPE = {
-  RPM: 'RPM',
-  APCM: 'APCM',
-} as const;
+export const ALL_STUDENT_STATUSES: StudentStatus[] = ['active', 'deactivated', 'deleted'];
 ```

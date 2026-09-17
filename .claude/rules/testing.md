@@ -2,25 +2,27 @@
 
 ## Framework
 
-Vitest + @testing-library/react. Always import from `@testing-library/react`, not from `react-dom/test-utils`.
+Jest (via Nx's `@nx/react` preset, `testEnvironment: 'jsdom'`) + `@testing-library/react`. Always import from `@testing-library/react`, not from `react-dom/test-utils`. Do not import from or add `vitest` — it is not a dependency in this workspace; `describe`/`it`/`expect`/`jest` are Jest globals and need no import.
 
 ```ts
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+// describe/it/expect/jest are globals — no import needed
 ```
+
+Run a single file via Nx, forwarding a pattern to the underlying jest run: `npx nx test web -- --testPathPattern=StudentList`.
 
 ## Test file location
 
 All tests for a module go in `src/modules/<feature>/__tests__/`. Name files to match the component or function being tested:
 
 ```
-src/modules/patient/__tests__/
-├── PatientList.test.tsx
-├── PatientDetail.test.tsx
-├── EnrollPatient.test.tsx
-├── patientApi.test.ts
-└── patientMapper.test.ts
+src/modules/student-management/__tests__/
+├── StudentTable.test.tsx
+├── StudentDetailScreen.test.tsx
+├── AddEditStudentDialog.test.tsx
+├── studentApi.test.ts
+└── studentMapper.test.ts
 ```
 
 ## Query priority
@@ -34,13 +36,13 @@ Prefer queries that reflect how users interact with the UI:
 
 ```tsx
 // Correct
-screen.getByRole('button', { name: /enroll patient/i });
+screen.getByRole('button', { name: /add student/i });
 screen.getByRole('table');
 screen.getByLabelText(/first name/i);
 screen.getByRole('alert');
 
 // Avoid unless necessary
-screen.getByTestId('patient-row-0');
+screen.getByTestId('student-row-0');
 ```
 
 ## Async queries
@@ -61,20 +63,15 @@ Mock the entire service module — not individual fetch calls, not the network:
 
 ```ts
 // Correct — mocks at the module boundary
-vi.mock('@/modules/patient/service/api', () => ({
-  listPatients: vi.fn(),
-  createPatient: vi.fn(),
+jest.mock('@/modules/student-management/service/api', () => ({
+  listStudents: jest.fn(),
+  createStudent: jest.fn(),
 }));
 
-import { listPatients } from '@/modules/patient/service/api';
+import { listStudents } from '@/modules/student-management/service/api';
 
 beforeEach(() => {
-  vi.mocked(listPatients).mockResolvedValue({
-    patients: [mockPatientDTO],
-    total: 1,
-    page: 1,
-    pageSize: 20,
-  });
+  jest.mocked(listStudents).mockResolvedValue([mockStudentApiDto]);
 });
 ```
 
@@ -82,7 +79,7 @@ beforeEach(() => {
 
 ```ts
 afterEach(() => {
-  vi.clearAllMocks();
+  jest.clearAllMocks();
 });
 ```
 
@@ -91,17 +88,17 @@ afterEach(() => {
 `describe` blocks group by behavior. Test names read as complete sentences.
 
 ```tsx
-describe('PatientList', () => {
+describe('StudentTable', () => {
   describe('when the list loads successfully', () => {
-    it('renders a row for each patient', async () => { ... });
-    it('shows the patient MRN in each row', async () => { ... });
+    it('renders a row for each student', async () => { ... });
+    it('shows the student ID in each row', async () => { ... });
   });
 
   describe('when the API call fails', () => {
     it('shows an error toast', async () => { ... });
   });
 
-  describe('when there are no patients', () => {
+  describe('when there are no students', () => {
     it('shows an empty state message', async () => { ... });
   });
 });
@@ -112,9 +109,9 @@ describe('PatientList', () => {
 Every custom hook must cover three cases:
 
 ```ts
-describe('usePatientDetail', () => {
+describe('useStudentDetail', () => {
   it('returns loading state initially', () => { ... });
-  it('returns patient data after successful fetch', async () => { ... });
+  it('returns student data after successful fetch', async () => { ... });
   it('returns error message when fetch fails', async () => { ... });
 });
 ```
@@ -124,10 +121,10 @@ Use `renderHook` from `@testing-library/react`:
 ```ts
 import { renderHook, waitFor } from '@testing-library/react';
 
-it('returns patient data after successful fetch', async () => {
-  const { result } = renderHook(() => usePatientDetail('patient-123'));
+it('returns student data after successful fetch', async () => {
+  const { result } = renderHook(() => useStudentDetail('student-123'));
   await waitFor(() => expect(result.current.status).toBe('success'));
-  expect(result.current.data?.mrn).toBe('MRN001');
+  expect(result.current.data?.studentId).toBe('STU-001');
 });
 ```
 
@@ -136,9 +133,9 @@ it('returns patient data after successful fetch', async () => {
 Cover edge cases: null input, empty arrays, boundary values, invalid input.
 
 ```ts
-describe('patientDTOToListItem', () => {
+describe('apiDtoToStudent', () => {
   it('formats full name from first and last name', () => { ... });
-  it('falls back to em dash when email is undefined', () => { ... });
+  it('leaves address fields undefined when the API returns null', () => { ... });
   it('falls back to em dash when phone is undefined', () => { ... });
 });
 ```
@@ -149,11 +146,11 @@ Test what the user sees and does, not how the component is implemented internall
 
 ```tsx
 // Correct — tests user-observable behavior
-it('shows a success message after enrolling a patient', async () => {
-  render(<EnrollPatient />);
+it('shows a success message after adding a student', async () => {
+  render(<AddEditStudentDialog open onOpenChange={jest.fn()} onSubmit={jest.fn()} />);
   await userEvent.type(screen.getByLabelText(/first name/i), 'John');
-  await userEvent.click(screen.getByRole('button', { name: /enroll/i }));
-  expect(await screen.findByText(/enrolled successfully/i)).toBeInTheDocument();
+  await userEvent.click(screen.getByRole('button', { name: /save/i }));
+  expect(await screen.findByText(/added successfully/i)).toBeInTheDocument();
 });
 
 // Wrong — tests internal state
@@ -174,7 +171,7 @@ describe.only('...', () => { ... });
 Avoid snapshot tests. If you must use one, add a comment explaining why the snapshot is intentional.
 
 ```ts
-// Snapshot intentional: CPT code table column order is contractual with the billing API
+// Snapshot intentional: student table column order is contractual with the export tool
 expect(container).toMatchSnapshot();
 ```
 
@@ -184,12 +181,21 @@ Put shared test helpers and mock data in `src/__tests__/utils/` or co-located in
 
 ```ts
 // __tests__/mocks.ts
-export const mockPatientDTO: PatientDTO = {
-  id: 'p-001',
-  mrn: 'MRN001',
+export const mockStudentApiDto: StudentApiDto = {
+  id: 's-001',
+  studentId: 'STU-001',
   firstName: 'John',
   lastName: 'Doe',
-  dateOfBirth: '1980-01-15',
-  gender: 'MALE',
+  email: 'john.doe@example.com',
+  phone: '5551234567',
+  course: 'React Fundamentals',
+  status: 'active',
+  assignedOn: '2026-01-15',
+  createdAt: '2026-01-15T00:00:00.000Z',
+  streetAddress: null,
+  city: null,
+  state: null,
+  zipCode: null,
+  country: null,
 };
 ```

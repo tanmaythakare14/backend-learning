@@ -11,11 +11,13 @@ Every onboarding screen uses the same split layout — no exceptions:
     {/* Mobile logo — lg:hidden */}
     {/* Content */}
     <p className="mt-10 text-[12px] text-muted-foreground">
-      © 2026 Health Telematix. All rights reserved.
+      © 2026 {PRODUCT_NAME}. All rights reserved.
     </p>
   </div>
 </div>
 ```
+
+Use the `PRODUCT_NAME` constant from `src/modules/onboarding/constants/index.ts` (currently `'Cognify'`) — never hardcode a brand string in a component, per the real `OnboardingScreenLayout.tsx`.
 
 - `OnboardingLeftPanel` is at `src/modules/onboarding/components/onboarding-left-panel/OnboardingLeftPanel.tsx`
 - It is `hidden lg:flex` — only shows on large screens

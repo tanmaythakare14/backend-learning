@@ -18,12 +18,12 @@ shadcn/ui defines CSS variables in `globals.css` (`--background`, `--foreground`
 
 ```tsx
 // Wrong — hardcoded colors
-<p className="text-[#374151]">Patient Name</p>
+<p className="text-[#374151]">Student Name</p>
 <div className="bg-[#ef4444]">Critical</div>
 <span className="border-[#d1d5db]">...</span>
 
 // Correct — semantic tokens
-<p className="text-foreground">Patient Name</p>
+<p className="text-foreground">Student Name</p>
 <div className="bg-destructive text-destructive-foreground">Critical</div>
 <span className="border-border">...</span>
 ```
@@ -104,7 +104,7 @@ export function AlertBanner({ severity, message, className }: AlertBannerProps):
 
 ## shadcn/ui CSS variables — only in `globals.css`
 
-The CSS custom properties (`--background`, `--primary`, etc.) are defined in `src/index.css` or `globals.css`. Never override them inline or in a style tag:
+The CSS custom properties (`--background`, `--primary`, etc.) are defined in `src/index.css` (this project has no separate `globals.css`). Never override them inline or in a style tag:
 
 ```tsx
 // Wrong
@@ -114,20 +114,18 @@ The CSS custom properties (`--background`, `--primary`, etc.) are defined in `sr
 // :root { --primary: 221 83% 53%; }  ← belongs only in globals.css
 ```
 
-If you need to customize the theme colors for this project, edit the `:root` block in `globals.css` only.
+If you need to customize the theme colors for this project, edit the `:root` block in `src/index.css` only.
 
-## HIPAA data attribute
+## Sensitive-field data attribute
 
-Any DOM element that renders PHI (MRN, date of birth, SSN, insurance ID, full phone number, full email) must carry a `data-phi` attribute. This enables future audit tooling to detect PHI exposure.
+This project's boilerplate origin includes PHI/HIPAA-flavored security infra (`utils/logger.ts` redacts PII by pattern, `VITE_DISABLE_PHI_REDACTION` env flag) even though the current product (student/course management) isn't handling health records. No `data-phi` (or equivalent) attribute is actually used anywhere in the codebase today — this is a forward-looking convention, not an enforced one yet. If you do add one for a screen showing student contact details, mark full email, full phone, or full address the same way: `data-pii`, not `data-phi` (this app has no PHI).
 
 ```tsx
-// Patient MRN in a table cell
-<TableCell data-phi>{patient.mrn}</TableCell>
+// Optional convention — not yet adopted elsewhere in the codebase
+<TableCell data-pii>{student.email}</TableCell>
+<Input data-pii type="text" {...field} />
 
-// DOB in a form field
-<Input data-phi type="text" {...field} />
-
-// Name is NOT PHI by itself — only flag combined identifiers
+// Student name and studentId are NOT sensitive by themselves
 ```
 
 ## Typography
@@ -136,16 +134,16 @@ Use Tailwind typography utilities. Do not use arbitrary font sizes.
 
 ```tsx
 // Correct
-<h1 className="text-2xl font-semibold tracking-tight">Patients</h1>
-<p className="text-sm text-muted-foreground">42 patients enrolled</p>
+<h1 className="text-2xl font-semibold tracking-tight">Students</h1>
+<p className="text-sm text-muted-foreground">42 students enrolled</p>
 
 // Wrong
-<h1 className="text-[22px] font-[600]">Patients</h1>
+<h1 className="text-[22px] font-[600]">Students</h1>
 ```
 
 ## Responsive layout
 
-Use Tailwind responsive prefixes for adaptive layouts. The clinic portal is desktop-first.
+Use Tailwind responsive prefixes for adaptive layouts. The app is desktop-first.
 
 ```tsx
 <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-4">{/* KPI cards */}</div>
