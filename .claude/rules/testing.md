@@ -12,6 +12,8 @@ import userEvent from '@testing-library/user-event';
 
 Run a single file via Nx, forwarding a pattern to the underlying jest run: `npx nx test web -- --testPathPattern=StudentList`.
 
+**Known gap: `jest` is not currently installed in this workspace.** `npx nx test web` and `npx jest` both fail outright with `Cannot find module 'jest'`. Verify this is fixed (`ls node_modules/.bin/jest`) before assuming the test suite runs at all — until it is, verify frontend changes with `tsc --noEmit` + `eslint` + manual/Playwright browser checks instead.
+
 ## Test file location
 
 All tests for a module go in `src/modules/<feature>/__tests__/`. Name files to match the component or function being tested:

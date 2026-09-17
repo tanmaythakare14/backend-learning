@@ -1,5 +1,13 @@
 # Onboarding Screen Patterns
 
+> **Most of this file is historical.** Auth0 is now the sole identity
+> provider (see [state.md](state.md)) — the create-account, forgot-password,
+> and reset-password screens these patterns were built for have been
+> **deleted**. Only the **two-panel layout** below is still live (used by
+> `SignInScreen`). Don't resurrect the account-details-card, password-strength-bar,
+> success-popup, or demo-banner patterns without being asked — they no
+> longer correspond to any screen in this codebase.
+
 ## Two-panel layout (all onboarding screens)
 
 Every onboarding screen uses the same split layout — no exceptions:

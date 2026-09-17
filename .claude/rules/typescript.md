@@ -1,5 +1,18 @@
 # TypeScript Rules
 
+## Path aliases
+
+Use `@/` for `src/` in all imports. Never use relative `../../` paths that cross module boundaries.
+
+```ts
+// Correct
+import { listStudents } from '@/modules/student-management/service/api';
+import { Button } from '@/components/ui/button';
+
+// Wrong
+import { listStudents } from '../../modules/student-management/service/api';
+```
+
 ## No `any`
 
 Never use `any`. If the shape is unknown, use `unknown` and narrow it.

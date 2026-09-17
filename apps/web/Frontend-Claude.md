@@ -35,8 +35,8 @@ npx prettier --write src/<path>                                  # format one fi
 | UI components   | **shadcn/ui**                             | Only UI library; primitives hand-written under `components/ui/`             |
 | Styling         | **Tailwind CSS v4**                       | Utility classes only; `tailwind.config.js` is dead (auto content detection) |
 | Forms           | **React Hook Form + Zod**                 | Zod schema is the source of truth for the form's TS type                    |
-| Data tables     | **TanStack Table**                        | Paired with shadcn/ui `<Table>` primitives                                  |
-| Dialogs         | **@base-ui/react/dialog`+`alert-dialog`** | Not Radix — see Auth Architecture / Components notes below                  |
+| Data tables     | **shadcn/ui `<Table>`**                   | No table library installed — TanStack Table is NOT a dependency here        |
+| Dialogs         | **@base-ui/react/dialog`+`alert-dialog`** | Not Radix — see `.claude/rules/dialog.md`                                   |
 | Routing         | **React Router v7**                       | `BrowserRouter`, protected via `useAuth0()`, not a Redux slice              |
 | State           | **Redux Toolkit**                         | Global UI state only — currently almost unused; no auth slice exists        |
 | Icons           | **Lucide React**                          | Already used by shadcn/ui                                                   |
@@ -108,7 +108,7 @@ src/
 
 ## Path Aliases
 
-Use `@/` for `src/` in all imports. Never use relative `../../` paths that cross module boundaries.
+Use `@/` for `src/` in all imports. Never use relative `../../` paths that cross module boundaries. (See `.claude/rules/typescript.md`.)
 
 ```ts
 // correct
@@ -140,10 +140,10 @@ before touching anything auth-adjacent.
 
 - @rules/modules.md — folder structure, layer separation, barrel exports
 - @rules/components.md — shadcn/ui usage, form patterns, table patterns
-- @rules/dialog.md — `@base-ui/react/dialog` (not Radix) usage and TypeScript gotchas
+- @rules/dialog.md — `@base-ui/react/dialog`/`alert-dialog` (not Radix) usage and TypeScript gotchas
 - @rules/api.md — HTTP client, response typing, error handling
-- @rules/typescript.md — type safety, interfaces, Zod schema conventions
+- @rules/typescript.md — type safety, interfaces, Zod schema conventions, path aliases
 - @rules/state.md — Redux Toolkit slice/thunk patterns (currently near-unused — no auth slice)
 - @rules/styling.md — Tailwind utility rules, semantic token conventions
-- @rules/onboarding-patterns.md — **largely historical**, see Auth Architecture above
-- @rules/testing.md — documents Vitest, but the actual configured runner is Jest via Nx, and **`jest` is not installed in this workspace** — `nx test web`/`npx jest` fail outright with `Cannot find module 'jest'`. Verify frontend changes with `tsc --noEmit` + `eslint` + manual/Playwright browser checks, not the test suite, until this is fixed.
+- @rules/onboarding-patterns.md — **largely historical** (now flagged as such in the file itself) — only the two-panel layout is still live
+- @rules/testing.md — Jest via Nx (correctly documented) — but **`jest` is not installed in this workspace**, so `nx test web`/`npx jest` fail outright. Verify frontend changes with `tsc --noEmit` + `eslint` + manual/Playwright browser checks until this is fixed.
