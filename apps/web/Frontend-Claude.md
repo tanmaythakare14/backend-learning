@@ -29,20 +29,20 @@ npx prettier --write src/<path>                                  # format one fi
 
 ## Tech Stack — Approved Libraries Only
 
-| Purpose         | Library                              | Notes                                                              |
-| --------------- | ------------------------------------- | -------------------------------------------------------------------- |
-| Identity/Auth   | **Auth0** (`@auth0/auth0-react`)        | Sole identity provider — no custom login/register/reset screens      |
-| UI components   | **shadcn/ui**                          | Only UI library; primitives hand-written under `components/ui/`      |
-| Styling         | **Tailwind CSS v4**                    | Utility classes only; `tailwind.config.js` is dead (auto content detection) |
-| Forms           | **React Hook Form + Zod**              | Zod schema is the source of truth for the form's TS type              |
-| Data tables     | **TanStack Table**                     | Paired with shadcn/ui `<Table>` primitives                            |
-| Dialogs         | **@base-ui/react/dialog` + `alert-dialog`** | Not Radix — see Auth Architecture / Components notes below       |
-| Routing         | **React Router v7**                     | `BrowserRouter`, protected via `useAuth0()`, not a Redux slice        |
-| State           | **Redux Toolkit**                       | Global UI state only — currently almost unused; no auth slice exists |
-| Icons           | **Lucide React**                        | Already used by shadcn/ui                                            |
-| Toasts          | **Sonner**                              | Via shadcn/ui `<Sonner>` component                                    |
-| Class utilities | **clsx + tailwind-merge + cva**          | Required by shadcn/ui internals                                      |
-| Real-time       | **socket.io-client**                    | Chat module only (`message/service/socket.ts`)                        |
+| Purpose         | Library                                   | Notes                                                                       |
+| --------------- | ----------------------------------------- | --------------------------------------------------------------------------- |
+| Identity/Auth   | **Auth0** (`@auth0/auth0-react`)          | Sole identity provider — no custom login/register/reset screens             |
+| UI components   | **shadcn/ui**                             | Only UI library; primitives hand-written under `components/ui/`             |
+| Styling         | **Tailwind CSS v4**                       | Utility classes only; `tailwind.config.js` is dead (auto content detection) |
+| Forms           | **React Hook Form + Zod**                 | Zod schema is the source of truth for the form's TS type                    |
+| Data tables     | **TanStack Table**                        | Paired with shadcn/ui `<Table>` primitives                                  |
+| Dialogs         | **@base-ui/react/dialog`+`alert-dialog`** | Not Radix — see Auth Architecture / Components notes below                  |
+| Routing         | **React Router v7**                       | `BrowserRouter`, protected via `useAuth0()`, not a Redux slice              |
+| State           | **Redux Toolkit**                         | Global UI state only — currently almost unused; no auth slice exists        |
+| Icons           | **Lucide React**                          | Already used by shadcn/ui                                                   |
+| Toasts          | **Sonner**                                | Via shadcn/ui `<Sonner>` component                                          |
+| Class utilities | **clsx + tailwind-merge + cva**           | Required by shadcn/ui internals                                             |
+| Real-time       | **socket.io-client**                      | Chat module only (`message/service/socket.ts`)                              |
 
 Adding any library not in this table requires checking with the team first.
 
@@ -52,12 +52,12 @@ Adding any library not in this table requires checking with the team first.
 
 All feature code lives inside `src/modules/`. Never add business logic to `src/` root or `src/components/`.
 
-| Module               | Key screens/components                                   | Description                                                             |
-| -------------------- | ----------------------------------------------------------- | -------------------------------------------------------------------------- |
-| `onboarding`         | `SignInScreen`                                               | Sole entry point — two buttons that hand off to Auth0's hosted pages       |
-| `student-management` | List, detail, add/edit dialog, course filter                 | CRUD + soft-delete (active/deactivated/deleted) on students               |
-| `course-management`  | List, add/edit dialog, status tabs (incl. Deleted)            | CRUD + soft-delete on courses; catalog consumed independently by `student-management` |
-| `message`            | Conversation list, thread view                                | Real-time chat via REST + a Socket.io connection                          |
+| Module               | Key screens/components                             | Description                                                                           |
+| -------------------- | -------------------------------------------------- | ------------------------------------------------------------------------------------- |
+| `onboarding`         | `SignInScreen`                                     | Sole entry point — two buttons that hand off to Auth0's hosted pages                  |
+| `student-management` | List, detail, add/edit dialog, course filter       | CRUD + soft-delete (active/deactivated/deleted) on students                           |
+| `course-management`  | List, add/edit dialog, status tabs (incl. Deleted) | CRUD + soft-delete on courses; catalog consumed independently by `student-management` |
+| `message`            | Conversation list, thread view                     | Real-time chat via REST + a Socket.io connection                                      |
 
 ---
 
@@ -101,7 +101,7 @@ src/
 - Never hardcode API base URLs — read from `config.apiUrl` in `src/config/environment.ts`.
 - Never expose raw API error messages to the UI — `handleHttpError` already maps them to user-safe strings; don't bypass it.
 - Never log sensitive/user-identifying data with `console.log` — use `src/utils/logger.ts`, which auto-redacts sensitive-looking field names/patterns.
-- Redux-persisted state is AES-encrypted via the `secureStorage` adapter (`store/index.ts`) — never change that persistence config, and never put anything sensitive in a *non*-persisted slice either.
+- Redux-persisted state is AES-encrypted via the `secureStorage` adapter (`store/index.ts`) — never change that persistence config, and never put anything sensitive in a _non_-persisted slice either.
 - Don't rebuild a custom login/register/forgot-password screen — see Auth Architecture below. If a task sounds like it wants one, it almost certainly means wiring into Auth0 instead.
 
 ---

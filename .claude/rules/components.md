@@ -67,7 +67,11 @@ const studentFormSchema = z.object({
 type StudentFormValues = z.infer<typeof studentFormSchema>;
 
 // 3. Use the form
-export function StudentForm({ onSubmit }: { onSubmit: (data: StudentFormValues) => void }): JSX.Element {
+export function StudentForm({
+  onSubmit,
+}: {
+  onSubmit: (data: StudentFormValues) => void;
+}): JSX.Element {
   const form = useForm<StudentFormValues>({
     resolver: zodResolver(studentFormSchema),
     defaultValues: { firstName: '', lastName: '', email: '', phone: '', course: '' },

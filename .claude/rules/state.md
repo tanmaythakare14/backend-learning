@@ -8,9 +8,9 @@ This project authenticates via `@auth0/auth0-react` (`ProtectedRoute`, `AuthToke
 
 `src/store/index.ts` currently only has a placeholder `sampleReducer` — replace it with real slices as they're needed, following this shape:
 
-| Slice     | What goes here                                            |
-| --------- | ---------------------------------------------------------- |
-| `uiSlice` | Sidebar open/close, active modal, global loading overlay  |
+| Slice     | What goes here                                           |
+| --------- | -------------------------------------------------------- |
+| `uiSlice` | Sidebar open/close, active modal, global loading overlay |
 
 **Server/API data (student list, course records) does NOT go in Redux.** Use component-local state + the service layer directly. If the data needs to be shared between sibling components, lift state to the nearest common parent or use a module-level context.
 
@@ -66,13 +66,16 @@ If a slice ever needs an async action (rare, since server data stays out of Redu
 
 ```ts
 // Correct — thunk delegates to service layer
-export const someThunk = createAsyncThunk('ui/something', async (arg: SomeArg, { rejectWithValue }) => {
-  try {
-    return await someApi.doSomething(arg); // service call
-  } catch (error) {
-    return rejectWithValue(error instanceof Error ? error.message : 'Request failed');
-  }
-});
+export const someThunk = createAsyncThunk(
+  'ui/something',
+  async (arg: SomeArg, { rejectWithValue }) => {
+    try {
+      return await someApi.doSomething(arg); // service call
+    } catch (error) {
+      return rejectWithValue(error instanceof Error ? error.message : 'Request failed');
+    }
+  },
+);
 
 // Wrong — fetch in a thunk
 export const someThunk = createAsyncThunk('ui/something', async (arg) => {

@@ -182,7 +182,7 @@ function isStudentApiDto(value: unknown): value is StudentApiDto {
 
 ## Casting API responses
 
-Prefer validating (or at least type-guarding) the actual DTO rather than casting it blind. The one narrow exception already used in this codebase's `service/api.ts` files: after checking `res.ok`, the *response envelope* (`{ data: T }`) is cast, because that shape is a fixed backend contract, not user-controlled data — the DTO fields themselves aren't asserted beyond that.
+Prefer validating (or at least type-guarding) the actual DTO rather than casting it blind. The one narrow exception already used in this codebase's `service/api.ts` files: after checking `res.ok`, the _response envelope_ (`{ data: T }`) is cast, because that shape is a fixed backend contract, not user-controlled data — the DTO fields themselves aren't asserted beyond that.
 
 ```ts
 // Acceptable — casting the known envelope shape after res.ok, matching existing api.ts files
