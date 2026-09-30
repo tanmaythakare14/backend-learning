@@ -1,3 +1,5 @@
+import { notifySessionExpired } from './authToken';
+
 export class ApiError extends Error {
   readonly status: number;
 
@@ -15,8 +17,11 @@ interface ApiErrorBody {
 
 export function handleHttpError(status: number, body?: ApiErrorBody): never {
   if (status === 401) {
-    window.location.href = '/login';
-    throw new Error('Session expired');
+    // Hand off to AuthTokenBridge, which navigates via the router. Assigning
+    // window.location here reloads the document, restarting the Auth0 bootstrap
+    // — and if the next request 401s as well, that reload repeats forever.
+    notifySessionExpired();
+    throw new ApiError('Your session has expired. Please sign in again.', status);
   }
   if (status >= 500) {
     throw new ApiError('Something went wrong. Please try again later.', status);

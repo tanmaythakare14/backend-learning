@@ -75,6 +75,65 @@
             "description": "Just-in-time provisioning — upserts the local profile row for the authenticated Auth0 user (identified by the verified sub claim on the bearer token). Requires a real Auth0 access token in the {{token}} collection variable; email/firstName/lastName in the body come from the frontend's useAuth0().user after login."
           },
           "response": []
+        },
+        {
+          "name": "Get My Profile",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/auth/me",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "auth", "me"]
+            },
+            "description": "Returns the local profile row for the authenticated user, resolved from the verified sub claim on the bearer token — not from anything in the request. Includes phone, which Auth0 does not hold. 404 if the user has never hit POST /auth/sync (i.e. has never completed a login against this app)."
+          },
+          "response": []
+        },
+        {
+          "name": "Update My Profile",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"firstName\": \"Ada\",\n  \"lastName\": \"Lovelace\",\n  \"email\": \"ada@example.com\",\n  \"phone\": \"(415) 555-0134\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/auth/me",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "auth", "me"]
+            },
+            "description": "Updates the profile. firstName, lastName and phone are stored only by us; changing email also writes it to Auth0 via the Management API, because Auth0 owns the sign-in identity.\n\nAll four fields are required. phone must match the US format (NNN) NNN-NNNN exactly — that is what the frontend PhoneNumberField produces.\n\nAn email change fails with 400 for social-login users (google-oauth2|...), since the provider owns their address, and 409 if another profile already uses it. The Auth0 write happens before the local one, so a failure there leaves nothing changed."
+          },
+          "response": []
+        },
+        {
+          "name": "Change Password",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"currentPassword\": \"your-current-password\",\n  \"newPassword\": \"a new passphrase here\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/auth/change-password",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "auth", "change-password"]
+            },
+            "description": "Changes the Auth0 password. This app never sees or stores it: the current password is verified by exchanging it with Auth0 (password-realm grant), then the Management API sets the new one.\n\nnewPassword must be 8-72 characters and different from currentPassword. Auth0 enforces the tenant policy on top of that and its rejection message is passed through verbatim — so a password can satisfy this API and still be refused as too weak.\n\n400 for social-login users, who have no password here. 401 if currentPassword is wrong."
+          },
+          "response": []
         }
       ]
     },
@@ -1583,96 +1642,6 @@
               "path": ["health"]
             },
             "description": "Kept here so this collection stops 404ing the moment the routing bug in CLAUDE.md's 'Known pre-existing bugs' section is fixed — delete once that lands."
-          },
-          "response": []
-        }
-      ]
-    },
-    {
-      "name": "Example",
-      "description": "Generic CRUD reference domain (`apps/api/src/domains/example`) — copy this structure for new domains.",
-      "item": [
-        {
-          "name": "Get All Examples",
-          "request": {
-            "method": "GET",
-            "header": [],
-            "url": {
-              "raw": "{{baseUrl}}/api/v1",
-              "host": ["{{baseUrl}}"],
-              "path": ["api", "v1"]
-            },
-            "description": "Maps to ExampleController.getAll — but see the collection-level note: this path is currently shadowed by the Health Check handler and won't actually reach this controller until the routing collision is fixed."
-          },
-          "response": []
-        },
-        {
-          "name": "Get Example By Id",
-          "request": {
-            "method": "GET",
-            "header": [],
-            "url": {
-              "raw": "{{baseUrl}}/api/v1/{{exampleId}}",
-              "host": ["{{baseUrl}}"],
-              "path": ["api", "v1", "{{exampleId}}"]
-            }
-          },
-          "response": []
-        },
-        {
-          "name": "Create Example",
-          "request": {
-            "method": "POST",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              }
-            ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"name\": \"Sample example\",\n  \"col1\": \"value1\",\n  \"col2\": \"value2\",\n  \"col3\": \"value3\"\n}"
-            },
-            "url": {
-              "raw": "{{baseUrl}}/api/v1",
-              "host": ["{{baseUrl}}"],
-              "path": ["api", "v1"]
-            }
-          },
-          "response": []
-        },
-        {
-          "name": "Update Example",
-          "request": {
-            "method": "PUT",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              }
-            ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"name\": \"Updated example\",\n  \"isActive\": true\n}"
-            },
-            "url": {
-              "raw": "{{baseUrl}}/api/v1/{{exampleId}}",
-              "host": ["{{baseUrl}}"],
-              "path": ["api", "v1", "{{exampleId}}"]
-            }
-          },
-          "response": []
-        },
-        {
-          "name": "Delete Example",
-          "request": {
-            "method": "DELETE",
-            "header": [],
-            "url": {
-              "raw": "{{baseUrl}}/api/v1/{{exampleId}}",
-              "host": ["{{baseUrl}}"],
-              "path": ["api", "v1", "{{exampleId}}"]
-            }
           },
           "response": []
         }

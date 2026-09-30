@@ -5,48 +5,73 @@ import { SignInScreen } from '../modules/onboarding';
 import { StudentManagementScreen, StudentDetailScreen } from '../modules/student-management';
 import { MessageScreen } from '../modules/message';
 import { CourseManagementScreen } from '../modules/course-management';
+import { SettingsScreen } from '../modules/settings';
+import { DashboardScreen } from '../modules/dashboard';
+import { CurrentProfileProvider } from '../context/CurrentProfileProvider';
+import { useCurrentProfile } from '../context/currentProfileContext';
 import { AppShell } from '../components/layouts';
 import { Toaster } from '../components/ui/sonner';
 import { ProtectedRoute } from '../components/ProtectedRoute';
 import { AuthTokenBridge } from '../components/AuthTokenBridge';
+import { FullScreenLoader } from '../components/FullScreenLoader';
+
+/**
+ * Auth0 redirects back to the origin, so the login callback lands on "/" with
+ * ?code=…&state=… still in the URL. Redirecting away unconditionally replaced
+ * that URL before the SDK had read it — which flashed the sign-in screen on
+ * every login. Wait for the SDK to settle, then send the user onward.
+ */
+function RootRedirect(): JSX.Element {
+  const { isLoading, isAuthenticated } = useAuth0();
+
+  if (isLoading) return <FullScreenLoader />;
+
+  return <Navigate to={isAuthenticated ? '/dashboard' : '/login'} replace />;
+}
 
 function AuthenticatedShell({ children }: { children: ReactNode }): JSX.Element {
-  const { user } = useAuth0();
+  const { state } = useCurrentProfile();
+  const { user: auth0User } = useAuth0();
+
+  // Until the profile is complete there is no name to show — only the sign-in
+  // email (Auth0's own "name" for database users is that same email, so it is
+  // deliberately not passed as a name).
+  const email = (state.status === 'ready' ? state.profile.email : auth0User?.email) ?? '';
+  const user =
+    state.status === 'ready' && state.profile.profileComplete
+      ? {
+          fullName: `${state.profile.firstName} ${state.profile.lastName}`.trim(),
+          email,
+        }
+      : email
+        ? { email }
+        : null;
 
   return (
-    <AppShell
-      user={{
-        fullName: user?.name ?? 'Signed-in user',
-        email: user?.email ?? '',
-      }}
-    >
+    <AppShell user={user} isUserLoading={state.status === 'loading'}>
       {children}
     </AppShell>
   );
 }
 
-function PlaceholderPage({ title }: { title: string }): JSX.Element {
-  return (
-    <AuthenticatedShell>
-      <h1 className="text-2xl font-semibold tracking-tight text-foreground">{title}</h1>
-      <p className="mt-2 text-sm text-muted-foreground">
-        Screen not built yet — sidebar/top bar preview only.
-      </p>
-    </AuthenticatedShell>
-  );
-}
-
 function App() {
   return (
-    <>
+    <CurrentProfileProvider>
       <Toaster />
       <AuthTokenBridge />
       <Routes>
-        <Route path="/" element={<Navigate to="/login" replace />} />
+        <Route path="/" element={<RootRedirect />} />
         <Route path="/login" element={<SignInScreen />} />
 
         <Route element={<ProtectedRoute />}>
-          <Route path="/dashboard" element={<PlaceholderPage title="Dashboard" />} />
+          <Route
+            path="/dashboard"
+            element={
+              <AuthenticatedShell>
+                <DashboardScreen />
+              </AuthenticatedShell>
+            }
+          />
           <Route
             path="/students"
             element={
@@ -79,10 +104,17 @@ function App() {
               </AuthenticatedShell>
             }
           />
-          <Route path="/settings" element={<PlaceholderPage title="Settings" />} />
+          <Route
+            path="/settings"
+            element={
+              <AuthenticatedShell>
+                <SettingsScreen />
+              </AuthenticatedShell>
+            }
+          />
         </Route>
       </Routes>
-    </>
+    </CurrentProfileProvider>
   );
 }
 

@@ -6,11 +6,12 @@ import { AppSidebar } from './AppSidebar';
 import { AppTopBar, type AppTopBarUser } from './AppTopBar';
 
 export interface AppShellProps {
-  user: AppTopBarUser;
+  user: AppTopBarUser | null;
+  isUserLoading?: boolean;
   children: ReactNode;
 }
 
-export function AppShell({ user, children }: AppShellProps): JSX.Element {
+export function AppShell({ user, isUserLoading, children }: AppShellProps): JSX.Element {
   const { logout } = useAuth0();
   const [collapsed, setCollapsed] = useState(false);
   const [isLogoutConfirmOpen, setIsLogoutConfirmOpen] = useState(false);
@@ -27,7 +28,7 @@ export function AppShell({ user, children }: AppShellProps): JSX.Element {
         onLogout={() => setIsLogoutConfirmOpen(true)}
       />
       <div className="flex flex-1 flex-col overflow-hidden">
-        <AppTopBar user={user} />
+        <AppTopBar user={user} isLoading={isUserLoading} />
         <main className="flex-1 overflow-y-auto p-6">{children}</main>
       </div>
 

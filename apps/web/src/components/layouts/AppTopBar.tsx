@@ -1,22 +1,29 @@
 import type { JSX } from 'react';
-import { Bell } from 'lucide-react';
+import { Bell, UserRound } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { getInitials } from '@/utils/initials';
 
 export interface AppTopBarUser {
-  fullName: string;
+  /** Absent until the user has completed their profile — the bar then shows icon + email. */
+  fullName?: string;
   email: string;
   avatarUrl?: string;
 }
 
 export interface AppTopBarProps {
-  user: AppTopBarUser;
+  /** null only when not even an email is known — the bar then shows the icon alone. */
+  user: AppTopBarUser | null;
+  /** True while the stored profile is still loading, so nothing flashes in the name slot. */
+  isLoading?: boolean;
   hasUnreadNotifications?: boolean;
   onNotificationsClick?: () => void;
 }
 
+const AVATAR_CLASSES = 'flex h-9 w-9 shrink-0 items-center justify-center rounded-full';
+
 export function AppTopBar({
   user,
+  isLoading,
   hasUnreadNotifications,
   onNotificationsClick,
 }: AppTopBarProps): JSX.Element {
@@ -38,26 +45,46 @@ export function AppTopBar({
         <div className="h-8 w-px bg-border" />
 
         <div className="flex items-center gap-3">
-          {user.avatarUrl ? (
-            <img
-              src={user.avatarUrl}
-              alt=""
-              className="h-9 w-9 shrink-0 rounded-full object-cover"
-            />
-          ) : (
-            <div
-              className={cn(
-                'flex h-9 w-9 shrink-0 items-center justify-center rounded-full',
-                'bg-accent-soft text-[13px] font-semibold text-primary',
+          {isLoading ? (
+            <>
+              <div className={cn(AVATAR_CLASSES, 'animate-pulse bg-muted')} />
+              <div className="h-8 w-28 animate-pulse rounded bg-muted" />
+            </>
+          ) : user?.fullName ? (
+            <>
+              {user.avatarUrl ? (
+                <img
+                  src={user.avatarUrl}
+                  alt=""
+                  className="h-9 w-9 shrink-0 rounded-full object-cover"
+                />
+              ) : (
+                <div
+                  className={cn(
+                    AVATAR_CLASSES,
+                    'bg-accent-soft text-[13px] font-semibold text-primary',
+                  )}
+                >
+                  {getInitials(user.fullName)}
+                </div>
               )}
-            >
-              {getInitials(user.fullName)}
-            </div>
+              <div className="leading-tight">
+                <p className="text-sm font-medium text-foreground">{user.fullName}</p>
+                <p className="text-xs text-muted-foreground">{user.email}</p>
+              </div>
+            </>
+          ) : (
+            <>
+              <div
+                className={cn(AVATAR_CLASSES, 'bg-muted text-muted-foreground')}
+                role="img"
+                aria-label="User profile"
+              >
+                <UserRound className="h-5 w-5" />
+              </div>
+              {user && <p className="text-sm text-foreground">{user.email}</p>}
+            </>
           )}
-          <div className="leading-tight">
-            <p className="text-sm font-medium text-foreground">{user.fullName}</p>
-            <p className="text-xs text-muted-foreground">{user.email}</p>
-          </div>
         </div>
       </div>
     </header>

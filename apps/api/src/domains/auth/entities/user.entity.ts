@@ -14,6 +14,10 @@ export class User {
   @Column({ type: 'varchar', length: 255 })
   email!: string;
 
+  /** Contact number held by us, not Auth0. Null for rows created before the field existed. */
+  @Column({ type: 'varchar', length: 30, nullable: true })
+  phone!: string | null;
+
   @Column({ type: 'boolean', name: 'is_active', default: true })
   isActive!: boolean;
 

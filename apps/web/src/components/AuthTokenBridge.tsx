@@ -1,8 +1,10 @@
 import { useEffect, useRef } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useAuth0, type User } from '@auth0/auth0-react';
-import { setAccessTokenGetter } from '@/utils/authToken';
+import { setAccessTokenGetter, setSessionExpiredHandler } from '@/utils/authToken';
 import { syncProfile } from '@/modules/onboarding/service';
 import { logger } from '@/utils/logger';
+import { useCurrentProfile } from '@/context/currentProfileContext';
 
 /**
  * Auth0's default database-connection signup form only collects email —
@@ -25,6 +27,8 @@ function splitDisplayName(user: User): { firstName: string; lastName: string } {
  */
 export function AuthTokenBridge(): null {
   const { isAuthenticated, isLoading, user, getAccessTokenSilently } = useAuth0();
+  const navigate = useNavigate();
+  const { setProfile, setFailed } = useCurrentProfile();
   const hasSyncedRef = useRef(false);
 
   useEffect(() => {
@@ -32,14 +36,27 @@ export function AuthTokenBridge(): null {
   }, [getAccessTokenSilently]);
 
   useEffect(() => {
+    setSessionExpiredHandler(() => {
+      // Guard against re-navigating when we're already there — a 401 can land
+      // from several in-flight requests at once.
+      if (window.location.pathname !== '/login') {
+        navigate('/login', { replace: true });
+      }
+    });
+  }, [navigate]);
+
+  useEffect(() => {
     if (!isAuthenticated || isLoading || hasSyncedRef.current || !user) return;
     hasSyncedRef.current = true;
 
     const { firstName, lastName } = splitDisplayName(user);
-    syncProfile({ email: user.email ?? '', firstName, lastName }).catch((error: unknown) => {
-      logger.error('Failed to sync profile after login', error);
-    });
-  }, [isAuthenticated, isLoading, user]);
+    syncProfile({ email: user.email ?? '', firstName, lastName })
+      .then(setProfile)
+      .catch((error: unknown) => {
+        logger.error('Failed to sync profile after login', error);
+        setFailed();
+      });
+  }, [isAuthenticated, isLoading, user, setProfile, setFailed]);
 
   return null;
 }

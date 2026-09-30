@@ -4,6 +4,7 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth0 } from '@auth0/auth0-react';
 import { Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { FullScreenLoader } from '@/components/FullScreenLoader';
 import { PRODUCT_NAME, DASHBOARD_PATH } from '../../constants';
 import { OnboardingScreenLayout } from '../onboarding-screen-layout';
 
@@ -39,6 +40,13 @@ export function SignInScreen(): JSX.Element {
       navigate(DASHBOARD_PATH, { replace: true });
     }
   }, [isAuthenticated, navigate]);
+
+  // Rendering the form while the SDK is still restoring flashed the sign-in
+  // screen at users who were already signed in, a beat before the effect above
+  // moved them to the dashboard.
+  if (isLoading || isAuthenticated) {
+    return <FullScreenLoader />;
+  }
 
   const handleContinue = (): void => {
     void loginWithRedirect();

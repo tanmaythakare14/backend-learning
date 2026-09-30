@@ -1,0 +1,1 @@
+export { ProfileCompletionBanner } from './ProfileCompletionBanner';
