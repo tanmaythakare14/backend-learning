@@ -1,6 +1,6 @@
 ---
 description: Stop the dev servers and free their ports, then verify they are actually free
-argument-hint: "[ports, e.g. 4000 — omit for all dev ports]"
+argument-hint: '[ports, e.g. 4000 — omit for all dev ports]'
 ---
 
 Free the dev-server ports on this Windows machine and verify they are actually

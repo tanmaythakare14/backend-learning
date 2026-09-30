@@ -1,6 +1,6 @@
 ---
 description: Sync the Postman collection with the routes actually declared in the API controllers
-argument-hint: "[optional: a domain to limit to, e.g. auth]"
+argument-hint: '[optional: a domain to limit to, e.g. auth]'
 ---
 
 Sync `postman/collections/Backend AI API.postman_collection.json` with the
@@ -18,7 +18,7 @@ from the decorators:
   `@Delete` argument, under the global prefix `api/v1` (`main.ts`).
 - A bare `@Controller()` adds no segment. **`HealthCheckController` and
   `ExampleController` both do this**, so their handlers collide on `/api/v1` —
-  a known bug documented in CLAUDE.md. Record where routes *actually* resolve,
+  a known bug documented in CLAUDE.md. Record where routes _actually_ resolve,
   and leave the collection's existing explanatory request names alone rather
   than silently "fixing" them.
 - Note which routes carry `@Public()`; everything else needs a bearer token.
