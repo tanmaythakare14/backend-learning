@@ -1,12 +1,14 @@
 import { format, formatDistanceToNowStrict } from 'date-fns';
-import { QUIZ_MAX_QUESTIONS, QUIZ_MIN_QUESTIONS } from '../constants';
+import { MIN_OPTIONS, QUIZ_MIN_QUESTIONS } from '../constants';
 import type {
   Assignment,
   AssignmentKind,
   AssignmentState,
   AssignmentTab,
+  BuilderQuestionValues,
   QuizAnswersApiDto,
   QuizQuestion,
+  QuizQuestionType,
 } from '../@types';
 
 interface HandedIn {
@@ -17,11 +19,13 @@ export function getAssignmentState(
   dueAt: string,
   kind: AssignmentKind,
   handedIn: HandedIn | null,
+  /** A quiz with a Short/Long paragraph question still needs a person to read it. */
+  needsReview: boolean,
   now: Date = new Date(),
 ): AssignmentState {
   if (handedIn) {
-    // Every quiz ends in a descriptive answer a person still has to read.
-    if (kind === 'quiz') return 'review';
+    // A quiz of only choice questions is fully marked on submit, so it is just "submitted".
+    if (kind === 'quiz' && needsReview) return 'review';
     return handedIn.isLate ? 'late' : 'submitted';
   }
   return new Date(dueAt).getTime() < now.getTime() ? 'overdue' : 'todo';
@@ -73,37 +77,54 @@ export function sortForTab(assignments: Assignment[], tab: AssignmentTab): Assig
   );
 }
 
-/**
- * The quiz format: 7–8 questions, choice questions first, exactly one
- * descriptive question and it comes last. Returns the broken rules (empty when
- * the quiz is valid) so a creator screen can show them all at once.
- */
-export function validateQuizShape(questions: QuizQuestion[]): string[] {
-  const problems: string[] = [];
-  const count = questions.length;
-  const descriptive = questions.filter((q) => q.type === 'descriptive').length;
+/** Single and multiple choice are marked automatically; the two paragraph types are written. */
+export function isChoiceType(type: QuizQuestionType): type is 'single' | 'multiple' {
+  return type === 'single' || type === 'multiple';
+}
 
-  if (count < QUIZ_MIN_QUESTIONS || count > QUIZ_MAX_QUESTIONS) {
-    problems.push(
-      `A quiz needs ${QUIZ_MIN_QUESTIONS}–${QUIZ_MAX_QUESTIONS} questions, found ${count}.`,
-    );
+/**
+ * The only rule on a quiz as a whole: it must have a question. (There is deliberately no
+ * minimum above one, no maximum, and no required question type or order.) Per-question rules
+ * live in choiceProblem and the builder schema.
+ */
+export function quizShapeProblems(types: QuizQuestionType[]): string[] {
+  return types.length < QUIZ_MIN_QUESTIONS ? ['Add at least one question.'] : [];
+}
+
+/** True when any question is a Short/Long paragraph — i.e. needs a person to read the answer. */
+export function hasWrittenQuestion(questions: Array<{ type: QuizQuestionType }>): boolean {
+  return questions.some((question) => !isChoiceType(question.type));
+}
+
+/** Why a single/multiple choice question can't be saved yet, or null when it is fine. */
+export function choiceProblem(
+  type: QuizQuestionType,
+  options: Array<{ isCorrect: boolean }>,
+): string | null {
+  if (!isChoiceType(type)) return null;
+  if (options.length < MIN_OPTIONS) return `Add at least ${MIN_OPTIONS} options.`;
+
+  const correct = options.filter((option) => option.isCorrect).length;
+  if (correct === 0) {
+    return type === 'single' ? 'Mark the correct answer.' : 'Mark at least one correct answer.';
   }
-  if (descriptive !== 1) {
-    problems.push(`A quiz needs exactly one descriptive question, found ${descriptive}.`);
-  }
-  if (descriptive === 1 && questions[count - 1]?.type !== 'descriptive') {
-    problems.push('The descriptive question must be last.');
-  }
-  questions.forEach((q, index) => {
-    if (q.type !== 'descriptive' && q.options.length < 2) {
-      problems.push(`Question ${index + 1} needs at least two options.`);
+  if (type === 'single' && correct > 1) return 'Only one answer can be correct.';
+  return null;
+}
+
+/** The stored-quiz form of the format check — also needs each choice question to have options. */
+export function validateQuizShape(questions: QuizQuestion[]): string[] {
+  const problems = quizShapeProblems(questions.map((question) => question.type));
+  questions.forEach((question, index) => {
+    if (isChoiceType(question.type) && question.options.length < MIN_OPTIONS) {
+      problems.push(`Question ${index + 1} needs at least ${MIN_OPTIONS} options.`);
     }
   });
   return problems;
 }
 
 export function isQuestionAnswered(question: QuizQuestion, answers: QuizAnswersApiDto): boolean {
-  if (question.type === 'descriptive') return (answers.texts[question.id] ?? '').trim().length > 0;
+  if (!isChoiceType(question.type)) return (answers.texts[question.id] ?? '').trim().length > 0;
   return (answers.choices[question.id] ?? []).length > 0;
 }
 
@@ -115,5 +136,25 @@ export function isChoiceCorrect(chosen: string[], correct: string[]): boolean {
 export function questionTypeLabel(type: QuizQuestion['type']): string {
   if (type === 'single') return 'Choose one answer';
   if (type === 'multiple') return 'Choose all that apply';
+  if (type === 'short') return 'Short written answer';
   return 'Written answer';
+}
+
+/** A blank question for the builder — choice types start with two empty options. */
+export function emptyQuestion(type: QuizQuestionType = 'single'): BuilderQuestionValues {
+  return {
+    type,
+    prompt: '',
+    options: isChoiceType(type)
+      ? [
+          { label: '', isCorrect: false },
+          { label: '', isCorrect: false },
+        ]
+      : [],
+  };
+}
+
+/** "1 question" / "8 questions". */
+export function questionCountLabel(count: number): string {
+  return count === 1 ? '1 question' : `${count} questions`;
 }

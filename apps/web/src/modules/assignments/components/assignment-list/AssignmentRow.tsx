@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom';
 import { ChevronRight } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { ASSIGNMENTS_PATH } from '../../constants';
-import { formatDueLabel, formatSubmittedAt } from '../../utils';
+import { formatDueLabel, formatSubmittedAt, questionCountLabel } from '../../utils';
 import type { AssignmentRowProps } from '../../@types';
 import { AssignmentStatusBadge } from './AssignmentStatusBadge';
 
@@ -19,7 +19,7 @@ export function AssignmentRow({ assignment }: AssignmentRowProps): JSX.Element {
         <p className="truncate text-sm font-medium text-foreground">{title}</p>
         <p className="mt-0.5 truncate text-xs text-muted-foreground">
           {courseName}
-          {kind === 'quiz' ? ` · Quiz · ${questions.length} questions` : ''}
+          {kind === 'quiz' ? ` · Quiz · ${questionCountLabel(questions.length)}` : ''}
         </p>
       </div>
 

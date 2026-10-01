@@ -7,6 +7,7 @@ import { isQuestionAnswered } from '../../utils';
 import type { QuizAnswersApiDto, QuizRunnerProps } from '../../@types';
 import { ChoiceQuestion } from './ChoiceQuestion';
 import { DescriptiveQuestion } from './DescriptiveQuestion';
+import { ShortQuestion } from './ShortQuestion';
 import { QuizNavigator } from './QuizNavigator';
 import { QuizReview } from './QuizReview';
 
@@ -56,6 +57,13 @@ export function QuizRunner({ questions, isPastDue, onSubmit }: QuizRunnerProps):
           />
         ) : question.type === 'descriptive' ? (
           <DescriptiveQuestion
+            key={question.id}
+            question={question}
+            value={draft.texts[question.id] ?? ''}
+            onChange={(text) => setText(question.id, text)}
+          />
+        ) : question.type === 'short' ? (
+          <ShortQuestion
             key={question.id}
             question={question}
             value={draft.texts[question.id] ?? ''}

@@ -8,6 +8,7 @@ import { AuthModule } from './domains/auth/auth.module';
 import { StudentModule } from './domains/student/student.module';
 import { ChatModule } from './domains/chat/chat.module';
 import { CourseModule } from './domains/course/course.module';
+import { AssignmentModule } from './domains/assignment/assignment.module';
 import { ExampleModule } from './domains/example/example.module';
 import { LoggingModule } from './common/logging.module';
 import { AuditMiddleware } from './common/middleware/audit.middleware';
@@ -28,6 +29,8 @@ import { JwtAuthGuard } from './common/guards/jwt-auth.guard';
     StudentModule,
     ChatModule,
     CourseModule,
+    // Before ExampleModule for the same reason as above: GET /assignments is a one-segment path.
+    AssignmentModule,
     // ExampleModule's routes are intentionally last — its bare @Controller()
     // + @Get(':id') greedily matches ANY GET /api/v1/<one-segment> path, so
     // any sibling module with a same-shape route (e.g. this domain's

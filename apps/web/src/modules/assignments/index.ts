@@ -1,1 +1,1 @@
-export { AssignmentsScreen, AssignmentDetailScreen } from './components';
+export { AssignmentsScreen, AssignmentDetailScreen, AssignmentBuilderScreen } from './components';

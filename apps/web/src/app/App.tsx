@@ -7,7 +7,11 @@ import { MessageScreen } from '../modules/message';
 import { CourseManagementScreen } from '../modules/course-management';
 import { SettingsScreen } from '../modules/settings';
 import { DashboardScreen } from '../modules/dashboard';
-import { AssignmentsScreen, AssignmentDetailScreen } from '../modules/assignments';
+import {
+  AssignmentsScreen,
+  AssignmentDetailScreen,
+  AssignmentBuilderScreen,
+} from '../modules/assignments';
 import { CurrentProfileProvider } from '../context/CurrentProfileProvider';
 import { useCurrentProfile } from '../context/currentProfileContext';
 import { AppShell } from '../components/layouts';
@@ -110,6 +114,14 @@ function App() {
             element={
               <AuthenticatedShell>
                 <AssignmentsScreen />
+              </AuthenticatedShell>
+            }
+          />
+          <Route
+            path="/assignments/new"
+            element={
+              <AuthenticatedShell>
+                <AssignmentBuilderScreen />
               </AuthenticatedShell>
             }
           />

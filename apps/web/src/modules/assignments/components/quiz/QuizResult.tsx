@@ -2,7 +2,7 @@ import type { JSX } from 'react';
 import { Check, Circle, CircleDot, X } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
-import { isChoiceCorrect } from '../../utils';
+import { hasWrittenQuestion, isChoiceCorrect, isChoiceType } from '../../utils';
 import type { QuizQuestion, QuizResultProps } from '../../@types';
 
 function OptionLine({
@@ -67,21 +67,25 @@ export function QuizResult({ questions, attempt }: QuizResultProps): JSX.Element
   return (
     <div className="space-y-6">
       <dl className="flex flex-wrap gap-x-12 gap-y-4">
-        <div>
-          <dt className="text-xs text-muted-foreground">Choice questions</dt>
-          <dd className="text-2xl font-semibold text-foreground">
-            {choiceScore.correct} of {choiceScore.total} correct
-          </dd>
-        </div>
-        <div>
-          <dt className="text-xs text-muted-foreground">Written answer</dt>
-          <dd className="text-2xl font-semibold text-foreground">
-            {reviewStatus === 'graded' ? 'Graded' : 'Awaiting review'}
-          </dd>
-        </div>
+        {choiceScore.total > 0 && (
+          <div>
+            <dt className="text-xs text-muted-foreground">Choice questions</dt>
+            <dd className="text-2xl font-semibold text-foreground">
+              {choiceScore.correct} of {choiceScore.total} correct
+            </dd>
+          </div>
+        )}
+        {hasWrittenQuestion(questions) && (
+          <div>
+            <dt className="text-xs text-muted-foreground">Written answers</dt>
+            <dd className="text-2xl font-semibold text-foreground">
+              {reviewStatus === 'graded' ? 'Graded' : 'Awaiting review'}
+            </dd>
+          </div>
+        )}
       </dl>
 
-      {!correctAnswers && (
+      {!correctAnswers && choiceScore.total > 0 && (
         <p className="text-sm text-muted-foreground">
           The correct answers are shown here once the due date has passed.
         </p>
@@ -100,7 +104,7 @@ export function QuizResult({ questions, attempt }: QuizResultProps): JSX.Element
                 <p className="flex-1 text-sm font-medium leading-snug text-foreground">
                   {question.prompt}
                 </p>
-                {question.type !== 'descriptive' && correctIds && (
+                {isChoiceType(question.type) && correctIds && (
                   <Badge variant={isChoiceCorrect(chosen, correctIds) ? 'default' : 'destructive'}>
                     {isChoiceCorrect(chosen, correctIds) ? 'Correct' : 'Incorrect'}
                   </Badge>
@@ -108,7 +112,7 @@ export function QuizResult({ questions, attempt }: QuizResultProps): JSX.Element
               </div>
 
               <div className="pl-9">
-                {question.type === 'descriptive' ? (
+                {!isChoiceType(question.type) ? (
                   text ? (
                     <p className="whitespace-pre-line rounded-xl bg-muted px-4 py-3 text-sm text-foreground">
                       {text}

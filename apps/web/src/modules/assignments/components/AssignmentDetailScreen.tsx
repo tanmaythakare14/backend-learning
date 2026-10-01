@@ -5,7 +5,13 @@ import { ArrowLeft, Loader2, Paperclip } from 'lucide-react';
 import { ApiError } from '@/utils/apiError';
 import { logger } from '@/utils/logger';
 import { ASSIGNMENTS_PATH } from '../constants';
-import { formatDueDate, formatDueLabel, formatFileSize, formatSubmittedAt } from '../utils';
+import {
+  formatDueDate,
+  formatDueLabel,
+  formatFileSize,
+  formatSubmittedAt,
+  questionCountLabel,
+} from '../utils';
 import { apiDtoToAssignment, getAssignment, submitAssignment, submitQuiz } from '../service';
 import type { AssignmentDetailState, SubmitAssignmentPayload, SubmitQuizPayload } from '../@types';
 import { AssignmentStatusBadge } from './assignment-list';
@@ -108,7 +114,9 @@ export function AssignmentDetailScreen(): JSX.Element {
         </div>
         <p className="text-sm text-muted-foreground">
           {assignment.courseName}
-          {assignment.kind === 'quiz' ? ` · Quiz · ${assignment.questions.length} questions` : ''}
+          {assignment.kind === 'quiz'
+            ? ` · Quiz · ${questionCountLabel(assignment.questions.length)}`
+            : ''}
           {' · '}
           {formatDueLabel(assignment.dueAt)}
         </p>

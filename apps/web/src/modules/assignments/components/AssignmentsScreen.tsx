@@ -1,17 +1,20 @@
 import { useEffect, useMemo, useState } from 'react';
 import type { JSX } from 'react';
-import { Loader2 } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import { Loader2, Plus } from 'lucide-react';
+import { Button } from '@/components/ui/button';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { SearchInput } from '@/components/common/SearchInput';
 import { ApiError } from '@/utils/apiError';
 import { logger } from '@/utils/logger';
-import { ASSIGNMENT_TABS } from '../constants';
+import { ASSIGNMENT_NEW_PATH, ASSIGNMENT_TABS } from '../constants';
 import { sortForTab, summarizeAssignments, tabForState } from '../utils';
 import { apiDtoToAssignment, listAssignments } from '../service';
 import type { AssignmentListState, AssignmentTab } from '../@types';
 import { AssignmentRow } from './assignment-list';
 
 export function AssignmentsScreen(): JSX.Element {
+  const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState<AssignmentTab>('todo');
   const [search, setSearch] = useState('');
   const [loadState, setLoadState] = useState<AssignmentListState>({ status: 'loading' });
@@ -62,13 +65,19 @@ export function AssignmentsScreen(): JSX.Element {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-semibold tracking-tight text-foreground">Assignments</h1>
-        <p className="mt-1 text-sm text-muted-foreground">
-          {loadState.status === 'success'
-            ? summarizeAssignments(assignments)
-            : 'Your coursework, due dates and submissions in one place.'}
-        </p>
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div>
+          <h1 className="text-2xl font-semibold tracking-tight text-foreground">Assignments</h1>
+          <p className="mt-1 text-sm text-muted-foreground">
+            {loadState.status === 'success'
+              ? summarizeAssignments(assignments)
+              : 'Your coursework, due dates and submissions in one place.'}
+          </p>
+        </div>
+        <Button onClick={() => navigate(ASSIGNMENT_NEW_PATH)} className="h-10 gap-2">
+          <Plus className="h-4 w-4" />
+          Add New Assignment
+        </Button>
       </div>
 
       <Tabs value={activeTab} onValueChange={(value) => setActiveTab(value as AssignmentTab)}>

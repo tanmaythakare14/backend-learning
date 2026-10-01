@@ -1,13 +1,23 @@
-import { ApiError } from '@/utils/apiError';
+import { config } from '@/config/environment';
+import { ApiError, handleHttpError } from '@/utils/apiError';
+import { authHeaders } from '@/utils/httpHeaders';
 import type {
   AssignmentApiDto,
+  CourseOptionApiDto,
+  CreateAssignmentPayload,
   QuizAnswersApiDto,
   QuizAttemptApiDto,
   QuizQuestionApiDto,
   SubmitAssignmentPayload,
   SubmitQuizPayload,
 } from '../@types';
-import { isChoiceCorrect, validateQuizShape } from '../utils';
+import {
+  choiceProblem,
+  hasWrittenQuestion,
+  isChoiceCorrect,
+  isChoiceType,
+  validateQuizShape,
+} from '../utils';
 
 /*
  * MOCK:API — there is no assignments endpoint yet. These functions are the only
@@ -57,8 +67,13 @@ function choice(
   };
 }
 
+/** A written-answer question — a Short or Long paragraph. Never marked automatically. */
+function textQuestion(id: string, type: 'short' | 'descriptive', prompt: string): SeedQuestion {
+  return { question: { id, type, prompt, options: [] }, correct: [] };
+}
+
 function descriptive(id: string, prompt: string): SeedQuestion {
-  return { question: { id, type: 'descriptive', prompt, options: [] }, correct: [] };
+  return textQuestion(id, 'descriptive', prompt);
 }
 
 function makeQuiz(
@@ -77,9 +92,7 @@ function makeQuiz(
   }
 
   ANSWER_KEY[id] = Object.fromEntries(
-    seeds
-      .filter((seed) => seed.question.type !== 'descriptive')
-      .map((s) => [s.question.id, s.correct]),
+    seeds.filter((seed) => isChoiceType(seed.question.type)).map((s) => [s.question.id, s.correct]),
   );
 
   return {
@@ -101,7 +114,7 @@ function scoreChoices(
   choices: Record<string, string[]>,
 ): { correct: number; total: number } {
   const key = ANSWER_KEY[assignmentId] ?? {};
-  const choiceQuestions = questions.filter((q) => q.type !== 'descriptive');
+  const choiceQuestions = questions.filter((q) => isChoiceType(q.type));
   const correct = choiceQuestions.filter((q) =>
     isChoiceCorrect(choices[q.id] ?? [], key[q.id] ?? []),
   ).length;
@@ -120,7 +133,8 @@ function buildAttempt(
     submittedAt: new Date(submittedAt).toISOString(),
     isLate: submittedAt > new Date(assignment.dueAt).getTime(),
     choiceScore: scoreChoices(assignment.id, assignment.questions, answers.choices),
-    reviewStatus: 'pending',
+    // Nothing for a person to mark when every question is a choice question.
+    reviewStatus: hasWrittenQuestion(assignment.questions) ? 'pending' : 'graded',
     correctAnswers: null,
   };
 }
@@ -504,7 +518,7 @@ export async function submitQuiz(
   const choices: Record<string, string[]> = {};
   const texts: Record<string, string> = {};
   for (const question of found.questions) {
-    if (question.type === 'descriptive') {
+    if (!isChoiceType(question.type)) {
       const text = (payload.texts[question.id] ?? '').trim();
       if (text) texts[question.id] = text;
       continue;
@@ -525,4 +539,83 @@ export async function submitQuiz(
 
   store = store.map((assignment) => (assignment.id === id ? updated : assignment));
   return present(updated);
+}
+
+/**
+ * Admin: publish a new quiz. MOCK:API — the new assignment lands in the same in-memory
+ * store as the samples, so it shows up in the list straight away and can be taken as a
+ * student. The server-side rules are re-checked here because a real API would not trust
+ * the form: the quiz format, and every choice question having a valid answer key.
+ */
+export async function createAssignment(
+  payload: CreateAssignmentPayload,
+): Promise<AssignmentApiDto> {
+  await wait();
+
+  const id = `asg-${crypto.randomUUID().slice(0, 8)}`;
+  const seeds = payload.questions.map((question, index) => {
+    const questionId = `q${index + 1}`;
+    if (!isChoiceType(question.type)) {
+      return textQuestion(questionId, question.type, question.prompt);
+    }
+
+    const problem = choiceProblem(question.type, question.options);
+    if (problem) throw new ApiError(`Question ${index + 1}: ${problem}`, 400);
+    if (question.options.length > LETTERS.length) {
+      throw new ApiError(`Question ${index + 1}: use at most ${LETTERS.length} options.`, 400);
+    }
+
+    return choice(
+      questionId,
+      question.type,
+      question.prompt,
+      question.options.map((option) => option.label),
+      question.options.flatMap((option, optionIndex) => (option.isCorrect ? [optionIndex] : [])),
+    );
+  });
+
+  let created: AssignmentApiDto;
+  try {
+    created = makeQuiz(
+      id,
+      payload.title,
+      payload.courseName,
+      payload.instructions,
+      payload.dueAt,
+      seeds,
+    );
+  } catch (error) {
+    throw new ApiError(error instanceof Error ? error.message : 'This quiz is not valid.', 400);
+  }
+
+  store = [...store, created];
+  return present(created);
+}
+
+/**
+ * The one REAL call in this file: the course picker reads the live course catalogue
+ * (GET /api/v1/courses), the same endpoint the other modules read. The module keeps its
+ * own minimal fetch rather than importing course-management's service.
+ */
+export async function listCourseOptions(): Promise<CourseOptionApiDto[]> {
+  const url = new URL(`${config.apiUrl}/api/v1/courses`);
+  url.searchParams.set('status', 'active');
+
+  const res = await fetch(url.toString(), { headers: await authHeaders() });
+  const body: { data?: CourseOptionApiDto[]; message?: string } | undefined = await res
+    .json()
+    .catch(() => undefined);
+
+  if (!res.ok) {
+    // A 401 here must NOT go through handleHttpError: that sends the whole app to /login (and
+    // /login forwards a signed-in user to the dashboard), which would throw away the form the
+    // person is filling in just because a dropdown could not load. The builder shows this
+    // message beside the course picker instead, with a retry.
+    if (res.status === 401) {
+      throw new ApiError('Your session has expired. Please sign in again.', 401);
+    }
+    handleHttpError(res.status, body);
+  }
+
+  return (body as { data: CourseOptionApiDto[] }).data.map(({ id, name }) => ({ id, name }));
 }

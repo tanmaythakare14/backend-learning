@@ -1,4 +1,4 @@
-import type { AssignmentState, AssignmentTab } from '../@types';
+import type { AssignmentState, AssignmentTab, QuizQuestionType } from '../@types';
 
 export const ASSIGNMENTS_PATH = '/assignments';
 
@@ -22,7 +22,23 @@ export const MAX_ANSWER_LENGTH = 5000;
 export const ALLOWED_FILE_EXTENSIONS = ['pdf', 'doc', 'docx', 'png', 'jpg', 'jpeg'];
 export const FILE_ACCEPT = ALLOWED_FILE_EXTENSIONS.map((ext) => `.${ext}`).join(',');
 
-/** A quiz has 7–8 questions: choice questions first, then exactly one descriptive one. */
-export const QUIZ_MIN_QUESTIONS = 7;
-export const QUIZ_MAX_QUESTIONS = 8;
+/** A quiz needs at least one question — that is the only rule on how many. */
+export const QUIZ_MIN_QUESTIONS = 1;
 export const MAX_DESCRIPTIVE_LENGTH = 3000;
+export const MAX_SHORT_LENGTH = 300;
+
+// Admin: building an assignment
+export const ASSIGNMENT_NEW_PATH = '/assignments/new';
+export const MIN_OPTIONS = 2;
+export const MAX_OPTIONS = 5;
+export const MAX_PROMPT_LENGTH = 500;
+export const MAX_OPTION_LENGTH = 200;
+export const MAX_TITLE_LENGTH = 255;
+export const MAX_INSTRUCTIONS_LENGTH = 5000;
+
+export const QUESTION_TYPE_OPTIONS: Array<{ value: QuizQuestionType; label: string }> = [
+  { value: 'short', label: 'Short paragraph' },
+  { value: 'descriptive', label: 'Long paragraph' },
+  { value: 'single', label: 'Single choice' },
+  { value: 'multiple', label: 'Multiple choice' },
+];

@@ -46,6 +46,12 @@
       "key": "courseId",
       "value": "",
       "type": "string"
+    },
+    {
+      "key": "assignmentId",
+      "value": "",
+      "type": "string",
+      "description": "An assignment id — copy one from the List My Assignments response."
     }
   ],
   "item": [
@@ -1611,6 +1617,150 @@
               "body": "{\n  \"statusCode\": 404,\n  \"message\": \"Course with ID 11111111-1111-1111-1111-111111111111 not found\"\n}"
             }
           ]
+        }
+      ]
+    },
+    {
+      "name": "Assignments",
+      "description": "Real domain — apps/api/src/domains/assignment. Creating assignments (POST /assignments) and the student's view of them: a table, one assignment, a score, and submitting work. An assignment is either written (text and/or a file, resubmittable) or a quiz (one or more questions — any mix of single choice, multiple choice, short paragraph and long paragraph, with no maximum and no required type or order; one attempt per student).\n\nThe four student routes (list, get, score, submit) resolve WHO is asking from the verified token, never from a parameter, so there is no way to request another student's data. A student is the signed-in user whose verified Auth0 email equals an active student's email (checked via Auth0 /userinfo, since users.email is client-supplied and not trusted for this). Anyone else gets 403 — so these requests need a token for a user whose email matches a student row, and that student's course (free-text student.course) must equal a course name that has assignments.\n\nCreate Assignment is the exception: it is not student-scoped and has no role check yet. There is no edit or delete endpoint. Use Create Assignment, or run `yarn seed:assignments` in apps/api for sample data, then set the assignmentId collection variable from the id in its response or from List My Assignments.",
+      "item": [
+        {
+          "name": "List My Assignments",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/assignments?status=todo&search=&page=1&limit=20",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "assignments"],
+              "query": [
+                {
+                  "key": "status",
+                  "value": "todo",
+                  "description": "todo | submitted | overdue — omit for all. \"submitted\" includes late work and quizzes pending review."
+                },
+                {
+                  "key": "search",
+                  "value": "",
+                  "description": "Matches title or course name (case-insensitive)"
+                },
+                {
+                  "key": "page",
+                  "value": "1",
+                  "description": "Default 1"
+                },
+                {
+                  "key": "limit",
+                  "value": "20",
+                  "description": "Default 20, max 100"
+                }
+              ]
+            },
+            "description": "The student's assignment table: every assignment for their course, with a derived state (todo | submitted | late | review | overdue — \"review\" only for a quiz that has a written question; a quiz of only choice questions is simply \"submitted\"), the question count (0 for written work) and when they handed it in.\n\nThe body is { data: rows[], meta: { page, limit, total, totalPages }, counts: { todo, submitted, overdue } }. counts follow the search but NOT the status filter, so tab badges stay accurate while one tab is selected. Sorted soonest-due first for todo, most recent submission first for submitted, most overdue first for overdue.\n\nThe caller must be an enrolled student: their Auth0 email (read from Auth0 /userinfo with this token) must be verified and equal an active student row. Otherwise 403. An invalid status, page or limit is a 400. This is a one-segment GET, so AssignmentModule must stay registered before ExampleModule in app.module.ts."
+          },
+          "response": []
+        },
+        {
+          "name": "Get Assignment",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/assignments/{{assignmentId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "assignments", "{{assignmentId}}"]
+            },
+            "description": "One assignment: instructions, due date and state, plus — for a quiz — its questions, and the student's own submission or attempt.\n\nQuiz questions carry only id, type (single | multiple | short | descriptive), prompt and options { id, label }. The answer key is never included. quizAttempt.correctAnswers stays null until the quiz's due date has passed.\n\nSet assignmentId from the id in List My Assignments. The caller must be an enrolled student: their Auth0 email (read from Auth0 /userinfo with this token) must be verified and equal an active student row. Otherwise 403. An assignment that belongs to another course is a 404 (not 403) so ids can't be probed; a malformed id is a 400."
+          },
+          "response": []
+        },
+        {
+          "name": "Get Assignment Score",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/assignments/{{assignmentId}}/score",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "assignments", "{{assignmentId}}", "score"]
+            },
+            "description": "The student's score. For a quiz: choiceScore { correct, total, percentage } (choice questions only), reviewStatus, and a per-question breakdown { questionId, isCorrect, correctOptionIds } that is null until the due date has passed. For written work there is no score: choiceScore is null and reviewStatus is \"pending\".\n\nWritten answers (short and long paragraph) are marked by hand, so they are not part of choiceScore. reviewStatus is \"pending\" while a quiz has written answers waiting to be read, and \"graded\" for a quiz of only choice questions — there is nothing for a person to mark. 404 if the student has not submitted yet. The caller must be an enrolled student: their Auth0 email (read from Auth0 /userinfo with this token) must be verified and equal an active student row. Otherwise 403."
+          },
+          "response": []
+        },
+        {
+          "name": "Submit Written Assignment",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "answerText",
+                  "value": "My implementation is at https://github.com/example/bst",
+                  "type": "text",
+                  "description": "Up to 5000 characters. Optional if a file is attached."
+                },
+                {
+                  "key": "file",
+                  "type": "file",
+                  "src": [],
+                  "description": "Optional. pdf, doc, docx, png, jpg or jpeg, up to 10 MB."
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/assignments/{{assignmentId}}/submission",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "assignments", "{{assignmentId}}", "submission"]
+            },
+            "description": "Hands in a WRITTEN assignment as multipart/form-data — send answerText, a file, or both. Resubmitting replaces the previous submission entirely, including its file (a resubmission without a file clears it). Past the due date it is still accepted but flagged late.\n\nReturns 201 with the updated assignment (same shape as Get Assignment). Neither field → 400; wrong file type or over 10 MB → 400. The stored file name on disk is never exposed, and uploads are private — there is no public route to them. Sending this to a quiz is a 400 (use Submit Quiz). The caller must be an enrolled student: their Auth0 email (read from Auth0 /userinfo with this token) must be verified and equal an active student row. Otherwise 403."
+          },
+          "response": []
+        },
+        {
+          "name": "Submit Quiz",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"choices\": {\n    \"00000000-0000-4000-8000-000000000001\": [\"00000000-0000-4000-8000-0000000000a1\"],\n    \"00000000-0000-4000-8000-000000000002\": [\"00000000-0000-4000-8000-0000000000b1\", \"00000000-0000-4000-8000-0000000000b2\"]\n  },\n  \"texts\": {\n    \"00000000-0000-4000-8000-000000000008\": \"Authentication proves who you are; authorization decides what you may do.\"\n  }\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/assignments/{{assignmentId}}/submission",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "assignments", "{{assignmentId}}", "submission"]
+            },
+            "description": "Submits a QUIZ as JSON. choices maps a question id to the option ids picked; texts maps a short or long paragraph question's id to the written answer (max 3000 characters). The ids above are placeholders — replace them with the real question and option ids from Get Assignment, or the answers are ignored.\n\nONE ATTEMPT ONLY: a second submit is a 409, enforced by a database constraint so simultaneous requests cannot both succeed. Marking happens on the server and multi-answer questions are all-or-nothing (the chosen set must match exactly). Unanswered questions are allowed. A key that is not a UUID is a 400 rather than being dropped, so a malformed payload cannot burn the attempt. A file attachment on a quiz is a 400.\n\nReturns 201 with the updated assignment; use Get Assignment Score for the marks. The caller must be an enrolled student: their Auth0 email (read from Auth0 /userinfo with this token) must be verified and equal an active student row. Otherwise 403."
+          },
+          "response": []
+        },
+        {
+          "name": "Create Assignment",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"Quiz: REST and HTTP basics\",\n  \"courseId\": \"{{courseId}}\",\n  \"instructions\": \"Four questions on HTTP. You get one attempt.\",\n  \"dueAt\": \"2030-12-31T17:00:00.000Z\",\n  \"questions\": [\n    {\n      \"type\": \"single\",\n      \"prompt\": \"Which HTTP method fully replaces a resource?\",\n      \"options\": [\n        {\n          \"label\": \"POST\",\n          \"isCorrect\": false\n        },\n        {\n          \"label\": \"PUT\",\n          \"isCorrect\": true\n        },\n        {\n          \"label\": \"PATCH\",\n          \"isCorrect\": false\n        }\n      ]\n    },\n    {\n      \"type\": \"multiple\",\n      \"prompt\": \"Which methods are safe (they should not change server state)?\",\n      \"options\": [\n        {\n          \"label\": \"GET\",\n          \"isCorrect\": true\n        },\n        {\n          \"label\": \"HEAD\",\n          \"isCorrect\": true\n        },\n        {\n          \"label\": \"DELETE\",\n          \"isCorrect\": false\n        }\n      ]\n    },\n    {\n      \"type\": \"short\",\n      \"prompt\": \"Name one HTTP verb.\"\n    },\n    {\n      \"type\": \"descriptive\",\n      \"prompt\": \"Explain authentication versus authorization.\"\n    }\n  ]\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/assignments",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "assignments"]
+            },
+            "description": "Creates an assignment — the builder's \"Publish\" action. Send kind (\"quiz\", the default, or \"written\"), title, courseId, instructions, dueAt (ISO timestamp, must be in the future) and questions. Set the courseId collection variable to the id of an ACTIVE course first (GET /courses), and change dueAt if 2030-12-31 has passed.\n\nA quiz needs at least ONE question — there is no minimum above that, no maximum, and no required question type or order. Each question is single (radio), multiple (checkboxes), short (one-line written answer) or descriptive (long written answer). Single and multiple need 2-5 options and a valid answer key via isCorrect: exactly one correct for single, at least one for multiple. short and descriptive take no options — any sent are dropped. A written assignment has no questions (a non-empty list is a 400).\n\nReturns 201 with the new assignment, its questions and options WITH the answer key (isCorrect) — it goes to the person who just wrote it; students never receive it before the quiz's due date. Copy data.id into the assignmentId variable to use the other requests in this folder. The assignment, its questions and its options are saved in one transaction, so a failure leaves nothing half-created.\n\n400 for a missing or empty field, a title over 255 or a question over 500 characters, a past dueAt, an unknown kind or question type, or a choice question with a bad answer key (the message names the question, e.g. \"Question 2: mark the correct answer.\"). 404 if the course does not exist; 400 \"Choose an active course.\" if it is deactivated or deleted.\n\nNOT tied to a student, so unlike the other requests here the caller does not need to match a student record. There is also no role check yet: ANY signed-in user can create an assignment until the app has roles. Errors use Nest's { statusCode, message } shape, with several problems joined by semicolons."
+          },
+          "response": []
         }
       ]
     },
