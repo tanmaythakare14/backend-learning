@@ -6,6 +6,7 @@ import {
   Users,
   MessageSquare,
   BookOpen,
+  ClipboardList,
   Settings,
   LogOut,
   PanelLeftClose,
@@ -25,6 +26,7 @@ const NAV_ITEMS: NavItem[] = [
   { label: 'Student Management', path: '/students', icon: Users },
   { label: 'Message', path: '/messages', icon: MessageSquare },
   { label: 'Course Management', path: '/courses', icon: BookOpen },
+  { label: 'Assignment', path: '/assignments', icon: ClipboardList },
   { label: 'Settings', path: '/settings', icon: Settings },
 ];
 
