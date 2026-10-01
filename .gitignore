@@ -11,6 +11,9 @@ node_modules
 dist
 build
 
+# Uploaded user content
+apps/api/uploads
+
 # Nx
 .nx/cache
 .nx/workspace-data

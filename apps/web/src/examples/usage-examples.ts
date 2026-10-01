@@ -59,7 +59,7 @@ export function loggerExamples() {
     medicalRecordNumber: 'MRN-12345',
   };
 
-  logger.debug('Patient data retrieved', patientData);    // PHI auto-redacted
+  logger.debug('Patient data retrieved', patientData); // PHI auto-redacted
   logger.info('User logged in', { userId: 'user-123' });
   logger.warn('API rate limit approaching', { remaining: 10 });
 

@@ -47,10 +47,7 @@ const persistConfig = {
  * Sample reducer — replace or extend with your own slices.
  * State is automatically persisted and AES-encrypted via secureStorage.
  */
-const sampleReducer = (
-  state = { count: 0 },
-  action: { type: string; payload?: unknown },
-) => {
+const sampleReducer = (state = { count: 0 }, action: { type: string; payload?: unknown }) => {
   switch (action.type) {
     case 'increment':
       return { ...state, count: (state.count as number) + 1 };

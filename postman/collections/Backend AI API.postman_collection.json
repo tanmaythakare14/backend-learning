@@ -1,0 +1,1701 @@
+{
+  "info": {
+    "_postman_id": "6e2b7b9a-6b2c-4b3e-9b0e-1a2b3c4d5e6f",
+    "name": "Backend AI API",
+    "description": "Generated from the current apps/api NestJS backend. Global prefix is `/api/v1` (except `health`, which is *supposed* to be excluded but isn't — see the note on the Health Check request). Domains: `health-check`, `example` (generic CRUD reference template — real fields are literally `name`/`col1`/`col2`/`col3`), `auth` (real: `POST /auth/register`, `POST /auth/login`), and `student` (real: `GET /students` with status/course/search filters, `POST /students`, `PUT /students/:id` — name is immutable on update, see the Update Student request's description).\n\nKnown bug (see CLAUDE.md): both `HealthCheckController` and `ExampleController` use bare `@Controller()` with argument-less `@Get()` handlers, so both resolve to `GET /api/v1`. Because `HealthCheckModule` is imported before `ExampleModule` in `app.module.ts`, the health check handler wins and `ExampleController.getAll` is currently unreachable through the HTTP layer.\n\nSeparate known issue: errors thrown inside a domain service (e.g. `auth`'s duplicate-email `ConflictException`) don't go through the documented Express-level `errorHandler` — Nest's own exception pipeline intercepts them first, so the response shape for those is `{statusCode, message}` (2 keys), not the `{status, message, error}` (3 keys) shape the rest of the API uses. Both are shown as example responses on the Register request below.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "auth": {
+    "type": "bearer",
+    "bearer": [
+      {
+        "key": "token",
+        "value": "{{token}}",
+        "type": "string"
+      }
+    ]
+  },
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:4000",
+      "type": "string"
+    },
+    {
+      "key": "token",
+      "value": "",
+      "type": "string",
+      "description": "Real Auth0 access token — see the Auth folder description for how to obtain one."
+    },
+    {
+      "key": "exampleId",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "studentDbId",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "conversationId",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "courseId",
+      "value": "",
+      "type": "string"
+    }
+  ],
+  "item": [
+    {
+      "name": "Auth",
+      "description": "Auth0 is the sole identity provider now — register/login/forgot-password/reset-password all happen through Auth0's hosted pages, not this API. Set the {{token}} collection variable to a real Auth0 access token (log into the web app, then copy it from DevTools > Application > Local Storage > the @@auth0spajs@@ key, or from a Network request's Authorization header) before calling any endpoint below — every route requires it except /health.",
+      "item": [
+        {
+          "name": "Sync Profile",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"ada@example.com\",\n  \"firstName\": \"Ada\",\n  \"lastName\": \"Lovelace\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/auth/sync",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "auth", "sync"]
+            },
+            "description": "Just-in-time provisioning — upserts the local profile row for the authenticated Auth0 user (identified by the verified sub claim on the bearer token). Requires a real Auth0 access token in the {{token}} collection variable; email/firstName/lastName in the body come from the frontend's useAuth0().user after login."
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Students",
+      "description": "Real domain — apps/api/src/domains/student. Every field is required on create, matching the frontend Add Student form. `course` is a free-text non-empty string — courses are managed dynamically via the course-management module (frontend mock catalog, no backend endpoint yet), so there's no fixed server-side whitelist to validate against. Deactivate/activate is `PATCH /students/:id/status` (body `{status: 'active'|'deactivated'}`); delete is a soft-delete via `DELETE /students/:id` (sets status to 'deleted', row stays queryable). Both 404 on an id that's already `deleted` — their existence check deliberately excludes deleted students, same as PUT.\n\nNote for List Students / Get Student by ID: these routes only work because StudentModule is registered before ExampleModule in app.module.ts — ExampleController's bare @Controller() + @Get(':id') greedily matches ANY GET /api/v1/<one-segment> path, so it would otherwise swallow the list request first (same root cause as the health/example collision CLAUDE.md documents). Get Student by ID isn't affected by that collision itself (its path has two segments, `/students/:id`), but it depends on the same registration order to reach StudentController at all. If a future domain's route mysteriously 500s with a uuid-cast error, check module registration order before anything else.",
+      "item": [
+        {
+          "name": "List Students",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/students?status=active&course=Web Development,Cloud Computing&search=",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "students"],
+              "query": [
+                {
+                  "key": "status",
+                  "value": "active",
+                  "description": "active | deactivated | deleted — defaults to active if omitted"
+                },
+                {
+                  "key": "course",
+                  "value": "Web Development,Cloud Computing",
+                  "description": "Comma-separated course names, or repeat the param (?course=A&course=B)"
+                },
+                {
+                  "key": "search",
+                  "value": "",
+                  "description": "Matches first name, last name, or email"
+                }
+              ]
+            },
+            "description": "All three query params are optional and independent — combine any subset. Remove the ones you don't need from the Params tab rather than leaving them empty, since an empty search='' still runs (harmlessly matches everything)."
+          },
+          "response": [
+            {
+              "name": "200 OK",
+              "originalRequest": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/students?course=Web Development",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["api", "v1", "students"],
+                  "query": [
+                    {
+                      "key": "course",
+                      "value": "Web Development"
+                    }
+                  ]
+                }
+              },
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"status\": 200,\n  \"data\": [\n    {\n      \"id\": \"def4d6d4-e324-414d-9026-ae058b92059a\",\n      \"studentId\": \"STU-2403\",\n      \"firstName\": \"Alice\",\n      \"lastName\": \"Web\",\n      \"email\": \"alice-web@example.com\",\n      \"phone\": \"5551110001\",\n      \"course\": \"Web Development\",\n      \"status\": \"active\",\n      \"assignedOn\": \"2026-09-03T05:51:55.857Z\",\n      \"createdAt\": \"2026-09-03T05:51:55.857Z\"\n    }\n  ]\n}"
+            },
+            {
+              "name": "400 Bad Request (invalid status)",
+              "originalRequest": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/students?status=bogus",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["api", "v1", "students"],
+                  "query": [
+                    {
+                      "key": "status",
+                      "value": "bogus"
+                    }
+                  ]
+                }
+              },
+              "status": "Bad Request",
+              "code": 400,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"statusCode\": 400,\n  \"message\": \"\\\"bogus\\\" is not a valid status — use one of: active, deactivated, deleted\"\n}"
+            }
+          ]
+        },
+        {
+          "name": "Get Student by ID",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/students/{{studentDbId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "students", "{{studentDbId}}"]
+            },
+            "description": "{{studentDbId}} must be the `id` field (a UUID) from a Create/Update/List response — NOT the human-readable `studentId` (e.g. STU-2401). Unlike the other student routes, this one returns a student of ANY status, including `deleted` — the detail screen needs to be able to show a deleted student's record, not just active/deactivated ones."
+          },
+          "response": [
+            {
+              "name": "200 OK",
+              "originalRequest": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/students/{{studentDbId}}",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["api", "v1", "students", "{{studentDbId}}"]
+                }
+              },
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"status\": 200,\n  \"data\": {\n    \"id\": \"9cdd1f20-c30c-4dac-a858-0caa543bb538\",\n    \"studentId\": \"STU-2401\",\n    \"firstName\": \"Marie\",\n    \"lastName\": \"Curie\",\n    \"email\": \"marie.curie@example.com\",\n    \"phone\": \"(555) 555-0100\",\n    \"course\": \"Cybersecurity Fundamentals\",\n    \"streetAddress\": \"221B Baker Street\",\n    \"city\": \"San Francisco\",\n    \"state\": \"California\",\n    \"zipCode\": \"94107\",\n    \"country\": \"United States\",\n    \"status\": \"active\",\n    \"assignedOn\": \"2026-09-02T12:19:03.576Z\",\n    \"createdAt\": \"2026-09-02T12:19:03.576Z\"\n  }\n}"
+            },
+            {
+              "name": "400 Bad Request (sent the human-readable studentId instead of the id UUID)",
+              "originalRequest": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/students/STU-2401",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["api", "v1", "students", "STU-2401"]
+                }
+              },
+              "status": "Bad Request",
+              "code": 400,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"statusCode\": 400,\n  \"message\": \"\\\"STU-2401\\\" is not a valid student id — use the \\\"id\\\" field from the create/update response (a UUID), not the human-readable \\\"studentId\\\" (e.g. STU-2401)\"\n}"
+            },
+            {
+              "name": "404 Not Found",
+              "originalRequest": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/students/00000000-0000-0000-0000-000000000000",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["api", "v1", "students", "00000000-0000-0000-0000-000000000000"]
+                }
+              },
+              "status": "Not Found",
+              "code": 404,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"statusCode\": 404,\n  \"message\": \"Student with ID 00000000-0000-0000-0000-000000000000 not found\"\n}"
+            }
+          ]
+        },
+        {
+          "name": "Create Student",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"firstName\": \"Marie\",\n  \"lastName\": \"Curie\",\n  \"email\": \"marie.curie@example.com\",\n  \"phone\": \"(555) 555-0100\",\n  \"course\": \"Cybersecurity Fundamentals\",\n  \"streetAddress\": \"221B Baker Street\",\n  \"city\": \"San Francisco\",\n  \"state\": \"California\",\n  \"zipCode\": \"94107\",\n  \"country\": \"United States\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/students",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "students"]
+            },
+            "description": "studentId (e.g. STU-2401) is generated server-side — don't send it. Change the email before re-running, or you'll hit the 409 example below."
+          },
+          "response": [
+            {
+              "name": "201 Created",
+              "originalRequest": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"firstName\": \"Marie\",\n  \"lastName\": \"Curie\",\n  \"email\": \"marie.curie@example.com\",\n  \"phone\": \"(555) 555-0100\",\n  \"course\": \"Cybersecurity Fundamentals\",\n  \"streetAddress\": \"221B Baker Street\",\n  \"city\": \"San Francisco\",\n  \"state\": \"California\",\n  \"zipCode\": \"94107\",\n  \"country\": \"United States\"\n}"
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/students",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["api", "v1", "students"]
+                }
+              },
+              "status": "Created",
+              "code": 201,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"status\": 201,\n  \"message\": \"Created successfully\",\n  \"data\": {\n    \"id\": \"9cdd1f20-c30c-4dac-a858-0caa543bb538\",\n    \"studentId\": \"STU-2401\",\n    \"firstName\": \"Marie\",\n    \"lastName\": \"Curie\",\n    \"email\": \"marie.curie@example.com\",\n    \"phone\": \"(555) 555-0100\",\n    \"course\": \"Cybersecurity Fundamentals\",\n    \"streetAddress\": \"221B Baker Street\",\n    \"city\": \"San Francisco\",\n    \"state\": \"California\",\n    \"zipCode\": \"94107\",\n    \"country\": \"United States\",\n    \"status\": \"active\",\n    \"assignedOn\": \"2026-09-02T12:19:03.576Z\",\n    \"createdAt\": \"2026-09-02T12:19:03.576Z\"\n  }\n}"
+            },
+            {
+              "name": "409 Conflict (duplicate email)",
+              "originalRequest": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"firstName\": \"Marie\",\n  \"lastName\": \"Curie\",\n  \"email\": \"marie.curie@example.com\",\n  \"phone\": \"(555) 555-0100\",\n  \"course\": \"Cybersecurity Fundamentals\",\n  \"streetAddress\": \"221B Baker Street\",\n  \"city\": \"San Francisco\",\n  \"state\": \"California\",\n  \"zipCode\": \"94107\",\n  \"country\": \"United States\"\n}"
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/students",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["api", "v1", "students"]
+                }
+              },
+              "status": "Conflict",
+              "code": 409,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"statusCode\": 409,\n  \"message\": \"A student with this email already exists\"\n}"
+            },
+            {
+              "name": "400 Bad Request (missing field)",
+              "originalRequest": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"firstName\": \"Ada\",\n  \"lastName\": \"Lovelace\",\n  \"email\": \"ada2@example.com\",\n  \"course\": \"Web Development\",\n  \"streetAddress\": \"123 Main St\",\n  \"city\": \"San Francisco\",\n  \"state\": \"California\",\n  \"zipCode\": \"94107\",\n  \"country\": \"United States\"\n}"
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/students",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["api", "v1", "students"]
+                }
+              },
+              "status": "Bad Request",
+              "code": 400,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"status\": 400,\n  \"message\": \"Validation failed\",\n  \"errors\": [\n    { \"field\": \"phone\", \"message\": \"\\\"phone\\\" is required\" }\n  ],\n  \"error\": \"Bad Request\"\n}"
+            }
+          ]
+        },
+        {
+          "name": "Update Student",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"marie.curie@example.com\",\n  \"phone\": \"5559998888\",\n  \"course\": \"Cloud Computing\",\n  \"streetAddress\": \"221B Baker Street\",\n  \"city\": \"San Francisco\",\n  \"state\": \"California\",\n  \"zipCode\": \"94107\",\n  \"country\": \"United States\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/students/{{studentDbId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "students", "{{studentDbId}}"]
+            },
+            "description": "IMPORTANT: {{studentDbId}} must be the `id` field (a UUID) from a Create/Update Student response — NOT the human-readable `studentId` (e.g. STU-2401). Sending the wrong one used to 500; it now 400s with a message telling you exactly this, see the example below.\n\nfirstName/lastName are deliberately not accepted here — a student's name is immutable after enrollment. Sending them anyway is silently ignored (validate() strips unknown keys before the controller ever sees them); this was verified directly, not just documented."
+          },
+          "response": [
+            {
+              "name": "400 Bad Request (sent the human-readable studentId instead of the id UUID)",
+              "originalRequest": {
+                "method": "PUT",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"email\": \"marie.curie@example.com\",\n  \"phone\": \"5559998888\",\n  \"course\": \"Cloud Computing\",\n  \"streetAddress\": \"221B Baker Street\",\n  \"city\": \"San Francisco\",\n  \"state\": \"California\",\n  \"zipCode\": \"94107\",\n  \"country\": \"United States\"\n}"
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/students/STU-2401",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["api", "v1", "students", "STU-2401"]
+                }
+              },
+              "status": "Bad Request",
+              "code": 400,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"statusCode\": 400,\n  \"message\": \"\\\"STU-2401\\\" is not a valid student id — use the \\\"id\\\" field from the create/update response (a UUID), not the human-readable \\\"studentId\\\" (e.g. STU-2401)\"\n}"
+            },
+            {
+              "name": "200 OK",
+              "originalRequest": {
+                "method": "PUT",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"email\": \"edit-test-updated@example.com\",\n  \"phone\": \"5559998888\",\n  \"course\": \"Cloud Computing\",\n  \"streetAddress\": \"221B Baker Street\",\n  \"city\": \"San Francisco\",\n  \"state\": \"California\",\n  \"zipCode\": \"94107\",\n  \"country\": \"United States\"\n}"
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/students/{{studentDbId}}",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["api", "v1", "students", "{{studentDbId}}"]
+                }
+              },
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"status\": 200,\n  \"message\": \"Updated successfully\",\n  \"data\": {\n    \"id\": \"1df82c3e-4965-4383-b459-9309898e9030\",\n    \"studentId\": \"STU-2402\",\n    \"firstName\": \"Edit\",\n    \"lastName\": \"Test\",\n    \"email\": \"edit-test-updated@example.com\",\n    \"phone\": \"5559998888\",\n    \"course\": \"Cloud Computing\",\n    \"streetAddress\": \"221B Baker Street\",\n    \"city\": \"San Francisco\",\n    \"state\": \"California\",\n    \"zipCode\": \"94107\",\n    \"country\": \"United States\",\n    \"status\": \"active\",\n    \"assignedOn\": \"2026-09-02T12:44:48.701Z\",\n    \"createdAt\": \"2026-09-02T12:44:48.701Z\"\n  }\n}"
+            },
+            {
+              "name": "404 Not Found",
+              "originalRequest": {
+                "method": "PUT",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"email\": \"nobody@example.com\",\n  \"phone\": \"5551112222\",\n  \"course\": \"Cloud Computing\",\n  \"streetAddress\": \"221B Baker Street\",\n  \"city\": \"San Francisco\",\n  \"state\": \"California\",\n  \"zipCode\": \"94107\",\n  \"country\": \"United States\"\n}"
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/students/00000000-0000-0000-0000-000000000000",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["api", "v1", "students", "00000000-0000-0000-0000-000000000000"]
+                }
+              },
+              "status": "Not Found",
+              "code": 404,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"statusCode\": 404,\n  \"message\": \"Student with ID 00000000-0000-0000-0000-000000000000 not found\"\n}"
+            },
+            {
+              "name": "409 Conflict (email already used by another student)",
+              "originalRequest": {
+                "method": "PUT",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"email\": \"other-student@example.com\",\n  \"phone\": \"5559998888\",\n  \"course\": \"Cloud Computing\",\n  \"streetAddress\": \"221B Baker Street\",\n  \"city\": \"San Francisco\",\n  \"state\": \"California\",\n  \"zipCode\": \"94107\",\n  \"country\": \"United States\"\n}"
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/students/{{studentDbId}}",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["api", "v1", "students", "{{studentDbId}}"]
+                }
+              },
+              "status": "Conflict",
+              "code": 409,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"statusCode\": 409,\n  \"message\": \"Another student is already using this email\"\n}"
+            }
+          ]
+        },
+        {
+          "name": "Deactivate / Activate Student",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"status\": \"deactivated\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/students/{{studentDbId}}/status",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "students", "{{studentDbId}}", "status"]
+            },
+            "description": "status must be \"active\" or \"deactivated\" — \"deleted\" is rejected here on purpose, use DELETE /students/:id for that transition instead. Send \"active\" to reactivate a deactivated student."
+          },
+          "response": [
+            {
+              "name": "200 OK (deactivated)",
+              "originalRequest": {
+                "method": "PATCH",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"status\": \"deactivated\"\n}"
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/students/{{studentDbId}}/status",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["api", "v1", "students", "{{studentDbId}}", "status"]
+                }
+              },
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"status\": 200,\n  \"message\": \"Updated successfully\",\n  \"data\": {\n    \"id\": \"9cdd1f20-c30c-4dac-a858-0caa543bb538\",\n    \"studentId\": \"STU-2401\",\n    \"firstName\": \"Marie\",\n    \"lastName\": \"Curie\",\n    \"email\": \"marie.curie@example.com\",\n    \"phone\": \"(555) 555-0100\",\n    \"course\": \"Cybersecurity Fundamentals\",\n    \"streetAddress\": \"221B Baker Street\",\n    \"city\": \"San Francisco\",\n    \"state\": \"California\",\n    \"zipCode\": \"94107\",\n    \"country\": \"United States\",\n    \"status\": \"deactivated\",\n    \"assignedOn\": \"2026-09-02T12:19:03.576Z\",\n    \"createdAt\": \"2026-09-02T12:19:03.576Z\"\n  }\n}"
+            },
+            {
+              "name": "400 Bad Request (status not one of active/deactivated)",
+              "originalRequest": {
+                "method": "PATCH",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"status\": \"deleted\"\n}"
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/students/{{studentDbId}}/status",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["api", "v1", "students", "{{studentDbId}}", "status"]
+                }
+              },
+              "status": "Bad Request",
+              "code": 400,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"status\": 400,\n  \"message\": \"Validation failed\",\n  \"errors\": [\n    { \"field\": \"status\", \"message\": \"\\\"status\\\" must be one of [active, deactivated]\" }\n  ],\n  \"error\": \"Bad Request\"\n}"
+            },
+            {
+              "name": "404 Not Found",
+              "originalRequest": {
+                "method": "PATCH",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"status\": \"active\"\n}"
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/students/00000000-0000-0000-0000-000000000000/status",
+                  "host": ["{{baseUrl}}"],
+                  "path": [
+                    "api",
+                    "v1",
+                    "students",
+                    "00000000-0000-0000-0000-000000000000",
+                    "status"
+                  ]
+                }
+              },
+              "status": "Not Found",
+              "code": 404,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"statusCode\": 404,\n  \"message\": \"Student with ID 00000000-0000-0000-0000-000000000000 not found\"\n}"
+            }
+          ]
+        },
+        {
+          "name": "Delete Student",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/students/{{studentDbId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "students", "{{studentDbId}}"]
+            },
+            "description": "Soft-delete — sets status to \"deleted\", the row stays in the table (visible via GET /students?status=deleted or GET /students/:id). Calling this again on an already-deleted student 404s, since the existence check excludes deleted students on purpose."
+          },
+          "response": [
+            {
+              "name": "200 OK",
+              "originalRequest": {
+                "method": "DELETE",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/students/{{studentDbId}}",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["api", "v1", "students", "{{studentDbId}}"]
+                }
+              },
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"status\": 200,\n  \"message\": \"Deleted successfully\",\n  \"data\": {\n    \"id\": \"9cdd1f20-c30c-4dac-a858-0caa543bb538\",\n    \"studentId\": \"STU-2401\",\n    \"firstName\": \"Marie\",\n    \"lastName\": \"Curie\",\n    \"email\": \"marie.curie@example.com\",\n    \"phone\": \"(555) 555-0100\",\n    \"course\": \"Cybersecurity Fundamentals\",\n    \"streetAddress\": \"221B Baker Street\",\n    \"city\": \"San Francisco\",\n    \"state\": \"California\",\n    \"zipCode\": \"94107\",\n    \"country\": \"United States\",\n    \"status\": \"deleted\",\n    \"assignedOn\": \"2026-09-02T12:19:03.576Z\",\n    \"createdAt\": \"2026-09-02T12:19:03.576Z\"\n  }\n}"
+            },
+            {
+              "name": "404 Not Found (already deleted, or never existed)",
+              "originalRequest": {
+                "method": "DELETE",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/students/00000000-0000-0000-0000-000000000000",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["api", "v1", "students", "00000000-0000-0000-0000-000000000000"]
+                }
+              },
+              "status": "Not Found",
+              "code": 404,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"statusCode\": 404,\n  \"message\": \"Student with ID 00000000-0000-0000-0000-000000000000 not found\"\n}"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Chat",
+      "description": "Real domain — apps/api/src/domains/chat. WebSocket-backed messaging between admin and a student's record (no separate student-facing client exists in this codebase — \"real-time\" means every connected admin session sees updates live, not a second party replying). REST is the single write path; the Socket.io gateway at ws(s)://{{baseUrl}}/chat is push-only and broadcasts conversation:started, message:new, conversation:read, and conversation:cleared to all connected clients after each successful write. Attachments are uploaded separately via POST /chat/attachments before being referenced in a Send Message call.",
+      "item": [
+        {
+          "name": "List Conversations",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/chat/conversations",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "chat", "conversations"]
+            },
+            "description": "One conversation per student (unique on student_id) — \"starting a new chat\" with the same student reopens the existing thread rather than creating a second one."
+          },
+          "response": [
+            {
+              "name": "200 OK",
+              "originalRequest": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/chat/conversations",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["api", "v1", "chat", "conversations"]
+                },
+                "description": "One conversation per student (unique on student_id) — \"starting a new chat\" with the same student reopens the existing thread rather than creating a second one."
+              },
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"status\": 200,\n  \"data\": [\n    {\n      \"id\": \"0e53a817-a47d-42a2-ad61-bb233d7a12ac\",\n      \"participant\": {\n        \"studentDbId\": \"{{studentDbId}}\",\n        \"studentId\": \"STU-2402\",\n        \"fullName\": \"Atharva Bhanage\",\n        \"course\": \"Data Structures & Algorithms\"\n      },\n      \"lastMessage\": {\n        \"id\": \"3d6f8e0a-ccf6-441d-87e5-fbcb921c70a9\",\n        \"conversationId\": \"0e53a817-a47d-42a2-ad61-bb233d7a12ac\",\n        \"sender\": \"admin\",\n        \"text\": \"Hello!\",\n        \"attachments\": [],\n        \"sentAt\": \"2026-09-11T10:26:54.500Z\"\n      },\n      \"unreadCount\": 0\n    }\n  ]\n}"
+            }
+          ]
+        },
+        {
+          "name": "Get Messages",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/chat/conversations/{{conversationId}}/messages",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "chat", "conversations", "{{conversationId}}", "messages"]
+            }
+          },
+          "response": [
+            {
+              "name": "200 OK",
+              "originalRequest": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/chat/conversations/{{conversationId}}/messages",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["api", "v1", "chat", "conversations", "{{conversationId}}", "messages"]
+                }
+              },
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"status\": 200,\n  \"data\": [\n    {\n      \"id\": \"3d6f8e0a-ccf6-441d-87e5-fbcb921c70a9\",\n      \"conversationId\": \"{{conversationId}}\",\n      \"sender\": \"admin\",\n      \"text\": \"Hello!\",\n      \"attachments\": [],\n      \"sentAt\": \"2026-09-11T10:26:54.500Z\"\n    }\n  ]\n}"
+            },
+            {
+              "name": "404 Not Found",
+              "originalRequest": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/chat/conversations/{{conversationId}}/messages",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["api", "v1", "chat", "conversations", "{{conversationId}}", "messages"]
+                }
+              },
+              "status": "Not Found",
+              "code": 404,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"statusCode\": 404,\n  \"message\": \"Conversation with ID 11111111-1111-1111-1111-111111111111 not found\"\n}"
+            }
+          ]
+        },
+        {
+          "name": "Start Conversation",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/chat/conversations",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "chat", "conversations"]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"studentId\": \"{{studentDbId}}\"\n}"
+            },
+            "description": "Broadcasts conversation:started over the /chat WebSocket namespace to every connected admin session."
+          },
+          "response": [
+            {
+              "name": "201 Created",
+              "originalRequest": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/chat/conversations",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["api", "v1", "chat", "conversations"]
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"studentId\": \"{{studentDbId}}\"\n}"
+                },
+                "description": "Broadcasts conversation:started over the /chat WebSocket namespace to every connected admin session."
+              },
+              "status": "Created",
+              "code": 201,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"status\": 201,\n  \"message\": \"Created successfully\",\n  \"data\": {\n    \"id\": \"0e53a817-a47d-42a2-ad61-bb233d7a12ac\",\n    \"participant\": {\n      \"studentDbId\": \"{{studentDbId}}\",\n      \"studentId\": \"STU-2402\",\n      \"fullName\": \"Atharva Bhanage\",\n      \"course\": \"Data Structures & Algorithms\"\n    },\n    \"lastMessage\": null,\n    \"unreadCount\": 0\n  }\n}"
+            },
+            {
+              "name": "404 Not Found (unknown student)",
+              "originalRequest": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/chat/conversations",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["api", "v1", "chat", "conversations"]
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"studentId\": \"{{studentDbId}}\"\n}"
+                },
+                "description": "Broadcasts conversation:started over the /chat WebSocket namespace to every connected admin session."
+              },
+              "status": "Not Found",
+              "code": 404,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"statusCode\": 404,\n  \"message\": \"Student with ID 11111111-1111-1111-1111-111111111111 not found\"\n}"
+            }
+          ]
+        },
+        {
+          "name": "Send Message",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/chat/conversations/{{conversationId}}/messages",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "chat", "conversations", "{{conversationId}}", "messages"]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"text\": \"Hello!\",\n  \"attachments\": []\n}"
+            },
+            "description": "attachments (if any) must already be uploaded via POST /chat/attachments — this endpoint stores references, not files. Broadcasts message:new over WebSocket on success. At least one of text/attachments is required."
+          },
+          "response": [
+            {
+              "name": "201 Created",
+              "originalRequest": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/chat/conversations/{{conversationId}}/messages",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["api", "v1", "chat", "conversations", "{{conversationId}}", "messages"]
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"text\": \"Hello!\",\n  \"attachments\": []\n}"
+                },
+                "description": "attachments (if any) must already be uploaded via POST /chat/attachments — this endpoint stores references, not files. Broadcasts message:new over WebSocket on success. At least one of text/attachments is required."
+              },
+              "status": "Created",
+              "code": 201,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"status\": 201,\n  \"message\": \"Created successfully\",\n  \"data\": {\n    \"id\": \"3d6f8e0a-ccf6-441d-87e5-fbcb921c70a9\",\n    \"conversationId\": \"{{conversationId}}\",\n    \"sender\": \"admin\",\n    \"text\": \"Hello!\",\n    \"attachments\": [],\n    \"sentAt\": \"2026-09-11T10:26:54.500Z\"\n  }\n}"
+            },
+            {
+              "name": "400 Bad Request (empty message)",
+              "originalRequest": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/chat/conversations/{{conversationId}}/messages",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["api", "v1", "chat", "conversations", "{{conversationId}}", "messages"]
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"text\": \"Hello!\",\n  \"attachments\": []\n}"
+                },
+                "description": "attachments (if any) must already be uploaded via POST /chat/attachments — this endpoint stores references, not files. Broadcasts message:new over WebSocket on success. At least one of text/attachments is required."
+              },
+              "status": "Bad Request",
+              "code": 400,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"status\": 400,\n  \"message\": \"Validation failed\",\n  \"errors\": [\n    {\n      \"field\": \"\",\n      \"message\": \"\\\"value\\\" must contain at least one of [text, attachments]\"\n    }\n  ],\n  \"error\": \"Bad Request\"\n}"
+            }
+          ]
+        },
+        {
+          "name": "Mark Conversation Read",
+          "request": {
+            "method": "PATCH",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/chat/conversations/{{conversationId}}/read",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "chat", "conversations", "{{conversationId}}", "read"]
+            },
+            "description": "Resets unreadCount to 0. Broadcasts conversation:read over WebSocket."
+          },
+          "response": [
+            {
+              "name": "200 OK",
+              "originalRequest": {
+                "method": "PATCH",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/chat/conversations/{{conversationId}}/read",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["api", "v1", "chat", "conversations", "{{conversationId}}", "read"]
+                },
+                "description": "Resets unreadCount to 0. Broadcasts conversation:read over WebSocket."
+              },
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"status\": 200,\n  \"message\": \"Updated successfully\"\n}"
+            }
+          ]
+        },
+        {
+          "name": "Clear Conversation",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/chat/conversations/{{conversationId}}/messages",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "chat", "conversations", "{{conversationId}}", "messages"]
+            },
+            "description": "Deletes every message in the conversation (the conversation itself, and its student link, are kept). Broadcasts conversation:cleared over WebSocket."
+          },
+          "response": [
+            {
+              "name": "200 OK",
+              "originalRequest": {
+                "method": "DELETE",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/chat/conversations/{{conversationId}}/messages",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["api", "v1", "chat", "conversations", "{{conversationId}}", "messages"]
+                },
+                "description": "Deletes every message in the conversation (the conversation itself, and its student link, are kept). Broadcasts conversation:cleared over WebSocket."
+              },
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"status\": 200,\n  \"message\": \"Deleted successfully\"\n}"
+            }
+          ]
+        },
+        {
+          "name": "Upload Attachment",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "file",
+                  "type": "file",
+                  "src": []
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/chat/attachments",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "chat", "attachments"]
+            },
+            "description": "Multipart upload — field name must be \"file\". Stored on local disk under apps/api/uploads/chat (gitignored) and served back from /uploads/chat/<filename>, outside the /api/v1 prefix. Returns attachment metadata to attach to a subsequent Send Message call (the client generates the attachment's \"id\")."
+          },
+          "response": [
+            {
+              "name": "201 Created",
+              "originalRequest": {
+                "method": "POST",
+                "header": [],
+                "body": {
+                  "mode": "formdata",
+                  "formdata": [
+                    {
+                      "key": "file",
+                      "type": "file",
+                      "src": []
+                    }
+                  ]
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/chat/attachments",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["api", "v1", "chat", "attachments"]
+                },
+                "description": "Multipart upload — field name must be \"file\". Stored on local disk under apps/api/uploads/chat (gitignored) and served back from /uploads/chat/<filename>, outside the /api/v1 prefix. Returns attachment metadata to attach to a subsequent Send Message call (the client generates the attachment's \"id\")."
+              },
+              "status": "Created",
+              "code": 201,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"status\": 201,\n  \"message\": \"Created successfully\",\n  \"data\": {\n    \"kind\": \"pdf\",\n    \"name\": \"deployment-guide.pdf\",\n    \"url\": \"/uploads/chat/527a51f6-2cad-4035-968e-83f8988dea25.pdf\",\n    \"sizeLabel\": \"1.2 MB\"\n  }\n}"
+            },
+            {
+              "name": "400 Bad Request (no file)",
+              "originalRequest": {
+                "method": "POST",
+                "header": [],
+                "body": {
+                  "mode": "formdata",
+                  "formdata": [
+                    {
+                      "key": "file",
+                      "type": "file",
+                      "src": []
+                    }
+                  ]
+                },
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/chat/attachments",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["api", "v1", "chat", "attachments"]
+                },
+                "description": "Multipart upload — field name must be \"file\". Stored on local disk under apps/api/uploads/chat (gitignored) and served back from /uploads/chat/<filename>, outside the /api/v1 prefix. Returns attachment metadata to attach to a subsequent Send Message call (the client generates the attachment's \"id\")."
+              },
+              "status": "Bad Request",
+              "code": 400,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"statusCode\": 400,\n  \"message\": \"No file provided\"\n}"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Courses",
+      "description": "Real domain — apps/api/src/domains/course. Backs the Course Management screen (apps/web/src/modules/course-management) and is the single source of truth the Student Management \"Assigned course\" dropdown and course filter read from (via their own independent GET /courses calls — no cross-module frontend imports). course on the student table stays a free-text string with no FK to this table. Like the student domain, DELETE /courses/:id is a soft delete (status becomes 'deleted', row stays queryable) — status accepts active/deactivated/deleted for GET, but PATCH .../status only accepts active/deactivated (deleted is DELETE's job, matching updateStudentStatusSchema's same exclusion).",
+      "item": [
+        {
+          "name": "List Courses",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/courses?status=active",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "courses"],
+              "query": [
+                {
+                  "key": "status",
+                  "value": "active"
+                }
+              ]
+            },
+            "description": "`status` defaults to \"active\" if omitted — the only other valid value is \"deactivated\" — now including \"deleted\", matching the student domain exactly (DELETE is a soft delete, not a hard delete)."
+          },
+          "response": [
+            {
+              "name": "200 OK",
+              "originalRequest": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/courses?status=active",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["api", "v1", "courses"],
+                  "query": [
+                    {
+                      "key": "status",
+                      "value": "active"
+                    }
+                  ]
+                },
+                "description": "`status` defaults to \"active\" if omitted — the only other valid value is \"deactivated\" (no \"deleted\" status for courses, unlike students; DELETE is a real hard delete)."
+              },
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"status\": 200,\n  \"data\": [\n    {\n      \"id\": \"9cdd1f20-c30c-4dac-a858-0caa543bb538\",\n      \"name\": \"Cloud Computing\",\n      \"description\": \"Core concepts of cloud infrastructure, virtualization, and deployment.\",\n      \"thumbnailUrl\": \"https://example.com/cloud-computing.jpg\",\n      \"enrolledOn\": \"2026-05-18T00:00:00.000Z\",\n      \"totalLearners\": 84,\n      \"status\": \"active\"\n    }\n  ]\n}"
+            },
+            {
+              "name": "400 Bad Request (invalid status)",
+              "originalRequest": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/courses?status=active",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["api", "v1", "courses"],
+                  "query": [
+                    {
+                      "key": "status",
+                      "value": "active"
+                    }
+                  ]
+                },
+                "description": "`status` defaults to \"active\" if omitted — the only other valid value is \"deactivated\" (no \"deleted\" status for courses, unlike students; DELETE is a real hard delete)."
+              },
+              "status": "Bad Request",
+              "code": 400,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"statusCode\": 400,\n  \"message\": \"\\\"bogus\\\" is not a valid status — use one of: active, deactivated\"\n}"
+            }
+          ]
+        },
+        {
+          "name": "Create Course",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/courses",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "courses"]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Cloud Computing\",\n  \"description\": \"Core concepts of cloud infrastructure, virtualization, and deployment.\",\n  \"thumbnailUrl\": \"https://example.com/cloud-computing.jpg\"\n}"
+            },
+            "description": "enrolledOn, totalLearners, id, and status are all system-set — don't send them. New courses always start \"active\" with 0 learners."
+          },
+          "response": [
+            {
+              "name": "201 Created",
+              "originalRequest": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/courses",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["api", "v1", "courses"]
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"name\": \"Cloud Computing\",\n  \"description\": \"Core concepts of cloud infrastructure, virtualization, and deployment.\",\n  \"thumbnailUrl\": \"https://example.com/cloud-computing.jpg\"\n}"
+                },
+                "description": "enrolledOn, totalLearners, id, and status are all system-set — don't send them. New courses always start \"active\" with 0 learners."
+              },
+              "status": "Created",
+              "code": 201,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"status\": 201,\n  \"message\": \"Created successfully\",\n  \"data\": {\n    \"id\": \"9cdd1f20-c30c-4dac-a858-0caa543bb538\",\n    \"name\": \"Cloud Computing\",\n    \"description\": \"Core concepts of cloud infrastructure, virtualization, and deployment.\",\n    \"thumbnailUrl\": \"https://example.com/cloud-computing.jpg\",\n    \"enrolledOn\": \"2026-05-18T00:00:00.000Z\",\n    \"totalLearners\": 0,\n    \"status\": \"active\"\n  }\n}"
+            },
+            {
+              "name": "400 Bad Request (missing field)",
+              "originalRequest": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/courses",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["api", "v1", "courses"]
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"name\": \"Cloud Computing\",\n  \"description\": \"Core concepts of cloud infrastructure, virtualization, and deployment.\",\n  \"thumbnailUrl\": \"https://example.com/cloud-computing.jpg\"\n}"
+                },
+                "description": "enrolledOn, totalLearners, id, and status are all system-set — don't send them. New courses always start \"active\" with 0 learners."
+              },
+              "status": "Bad Request",
+              "code": 400,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"status\": 400,\n  \"message\": \"Validation failed\",\n  \"errors\": [\n    {\n      \"field\": \"thumbnailUrl\",\n      \"message\": \"\\\"thumbnailUrl\\\" is required\"\n    }\n  ],\n  \"error\": \"Bad Request\"\n}"
+            }
+          ]
+        },
+        {
+          "name": "Update Course",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/courses/{{courseId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "courses", "{{courseId}}"]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Cloud Computing\",\n  \"description\": \"Updated description.\",\n  \"thumbnailUrl\": \"https://example.com/cloud-computing-v2.jpg\"\n}"
+            },
+            "description": "Only name/description/thumbnailUrl are editable — status changes go through PATCH /courses/:id/status instead."
+          },
+          "response": [
+            {
+              "name": "200 OK",
+              "originalRequest": {
+                "method": "PUT",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/courses/{{courseId}}",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["api", "v1", "courses", "{{courseId}}"]
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"name\": \"Cloud Computing\",\n  \"description\": \"Updated description.\",\n  \"thumbnailUrl\": \"https://example.com/cloud-computing-v2.jpg\"\n}"
+                },
+                "description": "Only name/description/thumbnailUrl are editable — status changes go through PATCH /courses/:id/status instead."
+              },
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"status\": 200,\n  \"message\": \"Updated successfully\",\n  \"data\": {\n    \"id\": \"9cdd1f20-c30c-4dac-a858-0caa543bb538\",\n    \"name\": \"Cloud Computing\",\n    \"description\": \"Updated description.\",\n    \"thumbnailUrl\": \"https://example.com/cloud-computing-v2.jpg\",\n    \"enrolledOn\": \"2026-05-18T00:00:00.000Z\",\n    \"totalLearners\": 84,\n    \"status\": \"active\"\n  }\n}"
+            },
+            {
+              "name": "404 Not Found",
+              "originalRequest": {
+                "method": "PUT",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/courses/{{courseId}}",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["api", "v1", "courses", "{{courseId}}"]
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"name\": \"Cloud Computing\",\n  \"description\": \"Updated description.\",\n  \"thumbnailUrl\": \"https://example.com/cloud-computing-v2.jpg\"\n}"
+                },
+                "description": "Only name/description/thumbnailUrl are editable — status changes go through PATCH /courses/:id/status instead."
+              },
+              "status": "Not Found",
+              "code": 404,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"statusCode\": 404,\n  \"message\": \"Course with ID 11111111-1111-1111-1111-111111111111 not found\"\n}"
+            }
+          ]
+        },
+        {
+          "name": "Deactivate / Activate Course",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/courses/{{courseId}}/status",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "courses", "{{courseId}}", "status"]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"status\": \"deactivated\"\n}"
+            },
+            "description": "Toggles between \"active\" and \"deactivated\" — matches the two tabs in the Course Management screen."
+          },
+          "response": [
+            {
+              "name": "200 OK",
+              "originalRequest": {
+                "method": "PATCH",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/courses/{{courseId}}/status",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["api", "v1", "courses", "{{courseId}}", "status"]
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"status\": \"deactivated\"\n}"
+                },
+                "description": "Toggles between \"active\" and \"deactivated\" — matches the two tabs in the Course Management screen."
+              },
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"status\": 200,\n  \"message\": \"Updated successfully\",\n  \"data\": {\n    \"id\": \"9cdd1f20-c30c-4dac-a858-0caa543bb538\",\n    \"name\": \"Cloud Computing\",\n    \"description\": \"Core concepts of cloud infrastructure, virtualization, and deployment.\",\n    \"thumbnailUrl\": \"https://example.com/cloud-computing.jpg\",\n    \"enrolledOn\": \"2026-05-18T00:00:00.000Z\",\n    \"totalLearners\": 84,\n    \"status\": \"deactivated\"\n  }\n}"
+            },
+            {
+              "name": "404 Not Found",
+              "originalRequest": {
+                "method": "PATCH",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/courses/{{courseId}}/status",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["api", "v1", "courses", "{{courseId}}", "status"]
+                },
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"status\": \"deactivated\"\n}"
+                },
+                "description": "Toggles between \"active\" and \"deactivated\" — matches the two tabs in the Course Management screen."
+              },
+              "status": "Not Found",
+              "code": 404,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"statusCode\": 404,\n  \"message\": \"Course with ID 11111111-1111-1111-1111-111111111111 not found\"\n}"
+            }
+          ]
+        },
+        {
+          "name": "Delete Course",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/courses/{{courseId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "courses", "{{courseId}}"]
+            },
+            "description": "Soft delete — sets status to 'deleted'; the row stays queryable via GET /courses?status=deleted, matching DELETE /students/:id exactly."
+          },
+          "response": [
+            {
+              "name": "200 OK",
+              "originalRequest": {
+                "method": "DELETE",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/courses/{{courseId}}",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["api", "v1", "courses", "{{courseId}}"]
+                },
+                "description": "Hard delete — unlike students, there is no soft-delete/status trail for courses."
+              },
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"status\": 200,\n  \"message\": \"Deleted successfully\",\n  \"data\": {\n    \"id\": \"9cdd1f20-c30c-4dac-a858-0caa543bb538\",\n    \"name\": \"Cloud Computing\",\n    \"description\": \"Core concepts of cloud infrastructure, virtualization, and deployment.\",\n    \"thumbnailUrl\": \"https://example.com/cloud-computing.jpg\",\n    \"enrolledOn\": \"2026-05-18T00:00:00.000Z\",\n    \"totalLearners\": 84,\n    \"status\": \"deleted\"\n  }\n}"
+            },
+            {
+              "name": "404 Not Found",
+              "originalRequest": {
+                "method": "DELETE",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/api/v1/courses/{{courseId}}",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["api", "v1", "courses", "{{courseId}}"]
+                },
+                "description": "Hard delete — unlike students, there is no soft-delete/status trail for courses."
+              },
+              "status": "Not Found",
+              "code": 404,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"statusCode\": 404,\n  \"message\": \"Course with ID 11111111-1111-1111-1111-111111111111 not found\"\n}"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Health",
+      "item": [
+        {
+          "name": "Health Check (actual route — GET /api/v1)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1"]
+            },
+            "description": "Intended route is GET /health (see main.ts's `exclude: ['health']` and startup log line), but the exclude never matches because HealthCheckController's computed path is '' not 'health'. With the global prefix applied it actually lands on GET /api/v1, same as ExampleController.getAll — this request hits the real, currently-working path."
+          },
+          "response": []
+        },
+        {
+          "name": "Health Check (intended route — GET /health, currently 404s)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/health",
+              "host": ["{{baseUrl}}"],
+              "path": ["health"]
+            },
+            "description": "Kept here so this collection stops 404ing the moment the routing bug in CLAUDE.md's 'Known pre-existing bugs' section is fixed — delete once that lands."
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Example",
+      "description": "Generic CRUD reference domain (`apps/api/src/domains/example`) — copy this structure for new domains.",
+      "item": [
+        {
+          "name": "Get All Examples",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1"]
+            },
+            "description": "Maps to ExampleController.getAll — but see the collection-level note: this path is currently shadowed by the Health Check handler and won't actually reach this controller until the routing collision is fixed."
+          },
+          "response": []
+        },
+        {
+          "name": "Get Example By Id",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/{{exampleId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "{{exampleId}}"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Create Example",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Sample example\",\n  \"col1\": \"value1\",\n  \"col2\": \"value2\",\n  \"col3\": \"value3\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Update Example",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Updated example\",\n  \"isActive\": true\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/{{exampleId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "{{exampleId}}"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Delete Example",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/{{exampleId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "v1", "{{exampleId}}"]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Docs",
+      "item": [
+        {
+          "name": "Swagger UI",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/docs",
+              "host": ["{{baseUrl}}"],
+              "path": ["docs"]
+            },
+            "description": "Only mounted when NODE_ENV !== 'production' (see main.ts)."
+          },
+          "response": []
+        }
+      ]
+    }
+  ]
+}

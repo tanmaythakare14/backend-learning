@@ -9,10 +9,13 @@ const config: Config = {
   moduleFileExtensions: ['ts', 'js', 'json'],
   setupFilesAfterEnv: ['<rootDir>/jest.setup.ts'],
   transform: {
-    '^.+\\.ts$': ['ts-jest', {
-      tsconfig: '<rootDir>/tsconfig.spec.json',
-      diagnostics: { ignoreCodes: [151002] },
-    }],
+    '^.+\\.ts$': [
+      'ts-jest',
+      {
+        tsconfig: '<rootDir>/tsconfig.spec.json',
+        diagnostics: { ignoreCodes: [151002] },
+      },
+    ],
   },
   collectCoverage: true,
   collectCoverageFrom: [

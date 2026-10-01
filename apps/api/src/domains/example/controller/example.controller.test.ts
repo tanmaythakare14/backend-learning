@@ -49,9 +49,9 @@ describe('ExampleController', () => {
 
     it('propagates NotFoundException when service throws', async () => {
       service.getById.mockRejectedValue(new NotFoundException('Example with ID x not found'));
-      await expect(
-        controller.getById('x', mockRes() as unknown as Response),
-      ).rejects.toThrow(NotFoundException);
+      await expect(controller.getById('x', mockRes() as unknown as Response)).rejects.toThrow(
+        NotFoundException,
+      );
     });
   });
 
@@ -103,9 +103,9 @@ describe('ExampleController', () => {
 
     it('propagates NotFoundException', async () => {
       service.delete.mockRejectedValue(new NotFoundException('Example with ID x not found'));
-      await expect(
-        controller.delete('x', mockRes() as unknown as Response),
-      ).rejects.toThrow(NotFoundException);
+      await expect(controller.delete('x', mockRes() as unknown as Response)).rejects.toThrow(
+        NotFoundException,
+      );
     });
   });
 });

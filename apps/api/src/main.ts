@@ -1,10 +1,15 @@
 import 'reflect-metadata';
+import express from 'express';
 import { NestFactory } from '@nestjs/core';
 import { Logger } from '@nestjs/common';
 import { SwaggerModule, DocumentBuilder } from '@nestjs/swagger';
 import { AppModule } from './app.module';
 import { errorHandler, notFoundHandler } from './common/middleware/error-handler.middleware';
 import { logger } from './common/utils/logger';
+import {
+  CHAT_UPLOADS_DIR,
+  CHAT_UPLOADS_URL_PREFIX,
+} from './domains/chat/utils/attachment-storage.util';
 
 async function bootstrap(): Promise<void> {
   const app = await NestFactory.create(AppModule, {
@@ -26,7 +31,10 @@ async function bootstrap(): Promise<void> {
   // CORS — same logic as Node repo
   const allowedOrigins = (process.env.ALLOWED_ORIGINS || 'http://localhost:3000').split(',');
   app.enableCors({
-    origin: (origin: string | undefined, callback: (err: Error | null, allow?: boolean) => void) => {
+    origin: (
+      origin: string | undefined,
+      callback: (err: Error | null, allow?: boolean) => void,
+    ) => {
       if (!origin || allowedOrigins.includes(origin)) {
         callback(null, true);
       } else {
@@ -35,6 +43,11 @@ async function bootstrap(): Promise<void> {
     },
     credentials: true,
   });
+
+  // Serve uploaded chat attachments — deliberately outside the /api/v1 prefix
+  // (setGlobalPrefix only applies to Nest controller routes, not raw
+  // middleware attached directly to the underlying Express instance).
+  app.getHttpAdapter().getInstance().use(CHAT_UPLOADS_URL_PREFIX, express.static(CHAT_UPLOADS_DIR));
 
   // Swagger docs
   if (process.env.NODE_ENV !== 'production') {
@@ -48,11 +61,6 @@ async function bootstrap(): Promise<void> {
     SwaggerModule.setup('docs', app, document);
   }
 
-  // Express-level error handling (same as Node repo — errorHandler must be last)
-  const httpAdapter = app.getHttpAdapter().getInstance();
-  httpAdapter.use(notFoundHandler);
-  httpAdapter.use(errorHandler);
-
   // Graceful shutdown — from Node repo
   const shutdown = (signal: string): void => {
     logger.info(`${signal} received. Starting graceful shutdown...`);
@@ -63,6 +71,14 @@ async function bootstrap(): Promise<void> {
 
   const port = parseInt(process.env.PORT || '4000', 10);
   await app.listen(port);
+
+  // Express-level error handling (same as Node repo — errorHandler must be last).
+  // Must be attached after app.listen(), since that's what triggers Nest's internal
+  // route binding — attaching earlier put these ahead of every controller route,
+  // so they caught (and 404'd) every request before Nest's router ever ran.
+  const httpAdapter = app.getHttpAdapter().getInstance();
+  httpAdapter.use(notFoundHandler);
+  httpAdapter.use(errorHandler);
 
   logger.info('Server started successfully');
   logger.info(`Port: ${port}`);

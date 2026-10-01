@@ -10,10 +10,14 @@ Every onboarding screen uses the same split layout — no exceptions:
   <div className="flex-1 flex flex-col items-center justify-center px-6 py-10 lg:px-20 overflow-y-auto bg-stone-50">
     {/* Mobile logo — lg:hidden */}
     {/* Content */}
-    <p className="mt-10 text-[12px] text-muted-foreground">© 2026 Health Telematix. All rights reserved.</p>
+    <p className="mt-10 text-[12px] text-muted-foreground">
+      © 2026 {PRODUCT_NAME}. All rights reserved.
+    </p>
   </div>
 </div>
 ```
+
+Use the `PRODUCT_NAME` constant from `src/modules/onboarding/constants/index.ts` (currently `'Cognify'`) — never hardcode a brand string in a component, per the real `OnboardingScreenLayout.tsx`.
 
 - `OnboardingLeftPanel` is at `src/modules/onboarding/components/onboarding-left-panel/OnboardingLeftPanel.tsx`
 - It is `hidden lg:flex` — only shows on large screens
@@ -29,12 +33,16 @@ When showing pre-filled, non-editable data from an invitation, use a card with a
 ```tsx
 <div className="rounded-xl border border-slate-200 bg-white overflow-hidden mb-6">
   <div className="flex items-center justify-between px-4 py-3 border-b border-slate-100 bg-slate-50/60">
-    <p className="text-[12px] font-semibold text-muted-foreground uppercase tracking-wide">Account Details</p>
+    <p className="text-[12px] font-semibold text-muted-foreground uppercase tracking-wide">
+      Account Details
+    </p>
     <span className="inline-flex items-center gap-1 text-[11px] ... rounded-full px-2.5 py-0.5">
       <Lock size={9} /> From invitation
     </span>
   </div>
-  <div className="grid grid-cols-2 divide-x divide-slate-100">{/* icon + label + value per column */}</div>
+  <div className="grid grid-cols-2 divide-x divide-slate-100">
+    {/* icon + label + value per column */}
+  </div>
 </div>
 ```
 

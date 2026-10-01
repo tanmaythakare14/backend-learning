@@ -13,31 +13,34 @@ src/modules/<feature>/service/
 
 ## HTTP client
 
-Use the project's existing `fetch`-based approach. Read the base URL from `src/config/environment.ts` — never hardcode.
+Use the project's existing `fetch`-based approach. Read the base URL from `src/config/environment.ts` (`config.apiUrl`) — never hardcode. Auth is handled by Auth0 (`@auth0/auth0-react`), not a bearer token you manage yourself — attach it via the existing `authHeaders()` helper (`src/utils/httpHeaders.ts`), which reads the token through `src/utils/authToken.ts` (populated once by `AuthTokenBridge`).
 
 ```ts
 // src/config/environment.ts
-export const API_BASE_URL = import.meta.env.VITE_API_URL as string;
+export const config = {
+  apiUrl: import.meta.env.VITE_API_URL || 'http://localhost:4000',
+  // ...
+} as const;
 
 // service/api.ts — correct pattern
-import { API_BASE_URL } from '@/config/environment';
+import { config } from '@/config/environment';
+import { authHeaders } from '@/utils/httpHeaders';
+import { handleHttpError } from '@/utils/apiError';
 
-export async function getPatients(params: PatientListParams): Promise<PatientListResponse> {
-  const url = new URL(`${API_BASE_URL}/patients`);
-  url.searchParams.set('page', String(params.page));
+export async function listStudents(params: ListStudentsParams): Promise<StudentApiDto[]> {
+  const url = new URL(`${config.apiUrl}/api/v1/students`);
+  url.searchParams.set('status', params.status);
 
-  const res = await fetch(url.toString(), {
-    headers: {
-      'Content-Type': 'application/json',
-      Authorization: `Bearer ${getAuthToken()}`,
-    },
-  });
+  const res = await fetch(url.toString(), { headers: await authHeaders() });
+  const body: { data?: StudentApiDto[]; message?: string } | undefined = await res
+    .json()
+    .catch(() => undefined);
 
   if (!res.ok) {
-    handleHttpError(res.status);
+    handleHttpError(res.status, body);
   }
 
-  return res.json() as Promise<PatientListResponse>;
+  return (body as { data: StudentApiDto[] }).data;
 }
 ```
 
@@ -45,13 +48,13 @@ export async function getPatients(params: PatientListParams): Promise<PatientLis
 
 ```ts
 // Correct
-export async function getPatientById(id: string): Promise<PatientDTO> { ... }
-export async function createPatient(data: CreatePatientDTO): Promise<PatientDTO> { ... }
-export async function updatePatient(id: string, data: UpdatePatientDTO): Promise<PatientDTO> { ... }
-export async function deletePatient(id: string): Promise<void> { ... }
+export async function getStudent(id: string): Promise<StudentApiDto> { ... }
+export async function createStudent(data: CreateStudentPayload): Promise<StudentApiDto> { ... }
+export async function updateStudent(id: string, data: UpdateStudentPayload): Promise<StudentApiDto> { ... }
+export async function deleteStudent(id: string): Promise<void> { ... }
 
 // Wrong — inferred return types on async API functions
-export async function getPatientById(id: string) { ... }
+export async function getStudent(id: string) { ... }
 ```
 
 ## Response interfaces in `@types/index.ts`
@@ -60,35 +63,46 @@ Never define response types inline in `api.ts`:
 
 ```ts
 // Wrong — inline interface in api.ts
-async function getPatients(): Promise<{ patients: Array<{ id: string; name: string }> }> { ... }
+async function listStudents(): Promise<{ data: Array<{ id: string; name: string }> }> { ... }
 
 // Correct — interface in @types/index.ts
-export interface PatientListResponse {
-  patients: PatientDTO[];
-  total: number;
-  page: number;
-  pageSize: number;
+export interface StudentApiDto {
+  id: string;
+  studentId: string;
+  firstName: string;
+  lastName: string;
+  email: string;
+  phone: string;
+  course: string;
+  status: StudentStatus;
+  assignedOn: string;
 }
 ```
 
 ## HTTP error handling
 
-Handle all status codes explicitly. Never swallow errors silently.
+Handle status codes explicitly. Never swallow errors silently. This project's existing `handleHttpError` (`src/utils/apiError.ts`) takes the parsed response body too, because the backend's error middleware already returns a user-safe `message` for 4xx responses — reuse it rather than writing a new one per module:
 
 ```ts
-function handleHttpError(status: number): never {
+// src/utils/apiError.ts — existing implementation, follow this shape for new error paths
+export class ApiError extends Error {
+  readonly status: number;
+  constructor(message: string, status: number) {
+    super(message);
+    this.name = 'ApiError';
+    this.status = status;
+  }
+}
+
+export function handleHttpError(status: number, body?: { message?: string }): never {
   if (status === 401) {
-    // Redirect to login — do not expose to UI
     window.location.href = '/login';
     throw new Error('Session expired');
-  }
-  if (status === 403) {
-    throw new ApiError('You do not have permission to perform this action', status);
   }
   if (status >= 500) {
     throw new ApiError('Something went wrong. Please try again later.', status);
   }
-  throw new ApiError('Request failed', status);
+  throw new ApiError(body?.message ?? 'Request failed', status);
 }
 ```
 
@@ -97,8 +111,8 @@ In the component/hook that calls the service, map the error to a user-friendly t
 ```ts
 // In component or hook
 try {
-  await patientApi.createPatient(formData);
-  toast.success('Patient enrolled successfully');
+  await createStudent(payload);
+  toast.success('Student added successfully');
 } catch (error) {
   if (error instanceof ApiError) {
     toast.error(error.message); // already user-friendly from handleHttpError
@@ -108,18 +122,18 @@ try {
 }
 ```
 
-## PHI in API calls
+## PII in API calls
 
-PHI fields (MRN, DOB, SSN, insurance IDs, phone, email) must never appear in console logs. Use the project logger:
+Student contact fields (email, phone, address) must never appear in raw console logs. Use the project logger (`src/utils/logger.ts`), which redacts common PII patterns by default:
 
 ```ts
 import { logger } from '@/utils/logger';
 
-// Correct — logger auto-redacts PHI patterns
-logger.info('Fetching patient', { patientId: id });
+// Correct — logger auto-redacts PII patterns
+logger.info('Fetching student', { studentId: id });
 
-// Wrong — raw console.log with PHI
-console.log('Fetching patient', { mrn: patient.mrn, dob: patient.dateOfBirth });
+// Wrong — raw console.log with PII
+console.log('Fetching student', { email: student.email, phone: student.phone });
 ```
 
 ## Mapper pattern
@@ -128,45 +142,43 @@ Every module that displays data in a table or form needs a `mapper.ts` to transf
 
 ```ts
 // service/mapper.ts
-import type { PatientDTO, PatientListItem, PatientEnrollmentFormView } from '../@types';
+import type { StudentApiDto, Student, StudentFormValues } from '../@types';
 
-// DTO → ListItem (for table rows)
-export function patientDTOToListItem(dto: PatientDTO): PatientListItem {
+// DTO → domain/list shape
+export function apiDtoToStudent(dto: StudentApiDto): Student {
   return {
     id: dto.id,
-    mrn: dto.mrn,
-    fullName: `${dto.firstName} ${dto.lastName}`,
-    dateOfBirth: formatDate(dto.dateOfBirth),
-    gender: dto.gender,
-    email: dto.email ?? '—',
-    phone: dto.phone ?? '—',
-    pcpName: dto.primaryCarePhysician?.fullName ?? '—',
-  };
-}
-
-// DTO → FormView (for pre-filling edit forms)
-export function patientDTOToFormView(dto: PatientDTO): PatientEnrollmentFormView {
-  return {
+    studentId: dto.studentId,
     firstName: dto.firstName,
     lastName: dto.lastName,
-    mrn: dto.mrn,
-    dateOfBirth: dto.dateOfBirth,
-    email: dto.email ?? '',
-    phone: dto.phone ?? '',
-    gender: dto.gender,
+    email: dto.email,
+    phone: dto.phone,
+    course: dto.course,
+    status: dto.status,
+    assignedOn: dto.assignedOn,
+    address: {
+      street: dto.streetAddress ?? undefined,
+      city: dto.city ?? undefined,
+      state: dto.state ?? undefined,
+      zipCode: dto.zipCode ?? undefined,
+      country: dto.country ?? undefined,
+    },
   };
 }
 
-// FormView → CreateDTO (for POST request body)
-export function formViewToCreateDTO(view: PatientEnrollmentFormView): CreatePatientDTO {
+// FormView → CreatePayload (for POST request body)
+export function formValuesToCreatePayload(values: StudentFormValues): CreateStudentPayload {
   return {
-    firstName: view.firstName.trim(),
-    lastName: view.lastName.trim(),
-    mrn: view.mrn.trim(),
-    dateOfBirth: view.dateOfBirth,
-    email: view.email || undefined,
-    phone: view.phone,
-    gender: view.gender as PatientDTO['gender'],
+    firstName: values.firstName.trim(),
+    lastName: values.lastName.trim(),
+    email: values.email.trim(),
+    phone: values.phone.trim(),
+    course: values.course,
+    streetAddress: values.street.trim(),
+    city: values.city.trim(),
+    state: values.state,
+    zipCode: values.zipCode.trim(),
+    country: values.country,
   };
 }
 ```
@@ -177,34 +189,45 @@ Group functions by entity and CRUD operation:
 
 ```ts
 // service/api.ts
-export async function listPatients(params: PatientListParams): Promise<PatientListResponse>;
-export async function getPatient(id: string): Promise<PatientDTO>;
-export async function createPatient(data: CreatePatientDTO): Promise<PatientDTO>;
-export async function updatePatient(id: string, data: UpdatePatientDTO): Promise<PatientDTO>;
-export async function deletePatient(id: string): Promise<void>;
-export async function enrollPatient(data: EnrollPatientDTO): Promise<PatientDTO>;
+export async function listStudents(params: ListStudentsParams): Promise<StudentApiDto[]>;
+export async function getStudent(id: string): Promise<StudentApiDto>;
+export async function createStudent(data: CreateStudentPayload): Promise<StudentApiDto>;
+export async function updateStudent(id: string, data: UpdateStudentPayload): Promise<StudentApiDto>;
+export async function deleteStudent(id: string): Promise<void>;
+```
+
+## No cross-module imports for service calls
+
+A module owns its own fetches even for data another module also serves — don't import another module's `service/api.ts` (see [modules.md](modules.md)):
+
+```ts
+// Wrong
+import { listCourses } from '@/modules/course-management/service/api'; // inside student-management
+
+// Correct — student-management defines its own minimal CourseSummaryDto and fetches
+// GET /courses itself, rather than depending on course-management's service module.
 ```
 
 ## No API calls outside the service layer
 
 ```ts
 // Wrong — fetch in a component
-function PatientList() {
+function StudentTable() {
   useEffect(() => {
-    fetch('/api/patients').then(...);
+    fetch('/api/v1/students').then(...);
   }, []);
 }
 
 // Wrong — fetch in a Redux thunk
-createAsyncThunk('patient/load', async () => {
-  return await fetch('/api/patients').then(r => r.json());
+createAsyncThunk('student/load', async () => {
+  return await fetch('/api/v1/students').then(r => r.json());
 });
 
 // Correct — component calls service, service calls fetch
-function PatientList() {
-  const [patients, setPatients] = useState<PatientListItem[]>([]);
+function StudentTable() {
+  const [students, setStudents] = useState<Student[]>([]);
   useEffect(() => {
-    listPatients({ page: 1 }).then(res => setPatients(res.patients.map(patientDTOToListItem)));
+    listStudents({ status: 'active' }).then(res => setStudents(res.map(apiDtoToStudent)));
   }, []);
 }
 ```

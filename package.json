@@ -6,6 +6,9 @@
     "apps/*",
     "libs/*"
   ],
+  "resolutions": {
+    "@types/express-serve-static-core": "^5.0.0"
+  },
   "scripts": {
     "start:web": "nx serve web",
     "start:api": "nx serve api",

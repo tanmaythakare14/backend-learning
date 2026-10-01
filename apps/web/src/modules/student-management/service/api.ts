@@ -1,0 +1,142 @@
+import { config } from '@/config/environment';
+import { handleHttpError } from '@/utils/apiError';
+import { authHeaders } from '@/utils/httpHeaders';
+import type {
+  StudentApiDto,
+  CreateStudentPayload,
+  UpdateStudentPayload,
+  ListStudentsParams,
+  CourseSummaryDto,
+} from '../@types';
+
+export async function listStudents(params: ListStudentsParams): Promise<StudentApiDto[]> {
+  const url = new URL(`${config.apiUrl}/api/v1/students`);
+  url.searchParams.set('status', params.status);
+  if (params.course && params.course.length > 0) {
+    url.searchParams.set('course', params.course.join(','));
+  }
+  if (params.search) {
+    url.searchParams.set('search', params.search);
+  }
+
+  const res = await fetch(url.toString(), { headers: await authHeaders() });
+  const body: { data?: StudentApiDto[]; message?: string } | undefined = await res
+    .json()
+    .catch(() => undefined);
+
+  if (!res.ok) {
+    handleHttpError(res.status, body);
+  }
+
+  return (body as { data: StudentApiDto[] }).data;
+}
+
+export async function getStudent(id: string): Promise<StudentApiDto> {
+  const res = await fetch(`${config.apiUrl}/api/v1/students/${id}`, {
+    headers: await authHeaders(),
+  });
+  const body: { data?: StudentApiDto; message?: string } | undefined = await res
+    .json()
+    .catch(() => undefined);
+
+  if (!res.ok) {
+    handleHttpError(res.status, body);
+  }
+
+  return (body as { data: StudentApiDto }).data;
+}
+
+export async function createStudent(payload: CreateStudentPayload): Promise<StudentApiDto> {
+  const res = await fetch(`${config.apiUrl}/api/v1/students`, {
+    method: 'POST',
+    headers: await authHeaders({ 'Content-Type': 'application/json' }),
+    body: JSON.stringify(payload),
+  });
+
+  const body: { data?: StudentApiDto; message?: string } | undefined = await res
+    .json()
+    .catch(() => undefined);
+
+  if (!res.ok) {
+    handleHttpError(res.status, body);
+  }
+
+  return (body as { data: StudentApiDto }).data;
+}
+
+export async function updateStudent(
+  id: string,
+  payload: UpdateStudentPayload,
+): Promise<StudentApiDto> {
+  const res = await fetch(`${config.apiUrl}/api/v1/students/${id}`, {
+    method: 'PUT',
+    headers: await authHeaders({ 'Content-Type': 'application/json' }),
+    body: JSON.stringify(payload),
+  });
+
+  const body: { data?: StudentApiDto; message?: string } | undefined = await res
+    .json()
+    .catch(() => undefined);
+
+  if (!res.ok) {
+    handleHttpError(res.status, body);
+  }
+
+  return (body as { data: StudentApiDto }).data;
+}
+
+export async function updateStudentStatus(
+  id: string,
+  status: 'active' | 'deactivated',
+): Promise<StudentApiDto> {
+  const res = await fetch(`${config.apiUrl}/api/v1/students/${id}/status`, {
+    method: 'PATCH',
+    headers: await authHeaders({ 'Content-Type': 'application/json' }),
+    body: JSON.stringify({ status }),
+  });
+
+  const body: { data?: StudentApiDto; message?: string } | undefined = await res
+    .json()
+    .catch(() => undefined);
+
+  if (!res.ok) {
+    handleHttpError(res.status, body);
+  }
+
+  return (body as { data: StudentApiDto }).data;
+}
+
+/** This module owns its own fetch to the courses endpoint (rather than importing
+ * course-management's service) per the "no cross-module imports" rule. */
+export async function listActiveCourseNames(): Promise<string[]> {
+  const url = new URL(`${config.apiUrl}/api/v1/courses`);
+  url.searchParams.set('status', 'active');
+
+  const res = await fetch(url.toString(), { headers: await authHeaders() });
+  const body: { data?: CourseSummaryDto[]; message?: string } | undefined = await res
+    .json()
+    .catch(() => undefined);
+
+  if (!res.ok) {
+    handleHttpError(res.status, body);
+  }
+
+  return (body as { data: CourseSummaryDto[] }).data.map((course) => course.name);
+}
+
+export async function deleteStudent(id: string): Promise<StudentApiDto> {
+  const res = await fetch(`${config.apiUrl}/api/v1/students/${id}`, {
+    method: 'DELETE',
+    headers: await authHeaders(),
+  });
+
+  const body: { data?: StudentApiDto; message?: string } | undefined = await res
+    .json()
+    .catch(() => undefined);
+
+  if (!res.ok) {
+    handleHttpError(res.status, body);
+  }
+
+  return (body as { data: StudentApiDto }).data;
+}

@@ -23,23 +23,3 @@ export const validate =
     req.body = value;
     next();
   };
-
-/** Login validation: always returns 401 to avoid leaking email/password policy. */
-export const validateLogin =
-  (schema: ObjectSchema) =>
-  (req: Request, res: Response, next: NextFunction): void => {
-    const { error, value } = schema.validate(req.body, {
-      abortEarly: false,
-      stripUnknown: true,
-    });
-    if (error) {
-      res.status(HttpStatus.UNAUTHORIZED).json({
-        status: HttpStatus.UNAUTHORIZED,
-        message: AuthErrorMessages.INVALID_CREDENTIALS,
-        error: AuthErrorMessages.UNAUTHORIZED,
-      });
-      return;
-    }
-    req.body = value;
-    next();
-  };

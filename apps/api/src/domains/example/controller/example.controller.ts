@@ -1,5 +1,12 @@
-import { Controller, Get, Post, Put, Delete, Param, Body, Req, Res, UseGuards } from '@nestjs/common';
-import { ApiTags, ApiOperation, ApiOkResponse, ApiCreatedResponse, ApiNotFoundResponse, ApiBearerAuth } from '@nestjs/swagger';
+import { Controller, Get, Post, Put, Delete, Param, Body, Req, Res } from '@nestjs/common';
+import {
+  ApiTags,
+  ApiOperation,
+  ApiOkResponse,
+  ApiCreatedResponse,
+  ApiNotFoundResponse,
+  ApiBearerAuth,
+} from '@nestjs/swagger';
 import { Request, Response } from 'express';
 import { ExampleService } from '../service/example.service';
 import { ExampleCreateDto, ExampleUpdateDto } from '../dto/example.dto';

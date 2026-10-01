@@ -60,11 +60,9 @@ function getConnectionOptions(): Pick<
 const dataSourceOptions: PostgresConnectionOptions = {
   type: 'postgres',
   ...getConnectionOptions(),
-  synchronize: false,   // ⚠️ NEVER change this to true
+  synchronize: false, // ⚠️ NEVER change this to true
   migrationsRun: false, // ⚠️ Run migrations explicitly via CLI
-  entities: [
-    __dirname + '/../domains/**/entities/**/*.entity.{ts,js}',
-  ],
+  entities: [__dirname + '/../domains/**/entities/**/*.entity.{ts,js}'],
   migrations: [__dirname + '/../migrations/**/*.{ts,js}'],
   extra: getConnectionOptions().extra,
 };

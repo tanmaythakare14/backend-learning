@@ -11,10 +11,6 @@ export default {
     'subject-empty': [2, 'never'],
     'footer-leading-blank': [2, 'always'],
     'references-empty': [0, 'never'],
-    'type-enum': [
-      2,
-      'always',
-      ['feat', 'fix', 'docs', 'style', 'refactor', 'test', 'chore'],
-    ],
+    'type-enum': [2, 'always', ['feat', 'fix', 'docs', 'style', 'refactor', 'test', 'chore']],
   },
 };

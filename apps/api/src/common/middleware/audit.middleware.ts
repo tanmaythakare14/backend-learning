@@ -3,8 +3,7 @@ import { Request, Response, NextFunction } from 'express';
 import { LoggerService } from '../utils/logger.service';
 
 interface AuditActor {
-  userId?: string;
-  roles?: string[];
+  sub?: string;
   system: boolean;
 }
 
@@ -60,10 +59,6 @@ export class AuditMiddleware implements NestMiddleware {
   private resolveActor(req: Request): AuditActor {
     const user = req.user;
     if (!user) return { system: true };
-    return {
-      userId: user.userId,
-      roles: user.roles,
-      system: false,
-    };
+    return { sub: user.sub, system: false };
   }
 }
