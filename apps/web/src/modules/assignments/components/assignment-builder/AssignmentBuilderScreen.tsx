@@ -7,6 +7,7 @@ import { startOfToday } from 'date-fns';
 import { ArrowLeft, Loader2, Plus } from 'lucide-react';
 import { toast } from 'sonner';
 import { ApiError } from '@/utils/apiError';
+import { notifySessionExpired } from '@/utils/authToken';
 import { logger } from '@/utils/logger';
 import { Button } from '@/components/ui/button';
 import { DateTimePicker } from '@/components/common/date-time-picker';
@@ -69,6 +70,7 @@ export function AssignmentBuilderScreen(): JSX.Element {
         setCourseState({
           status: 'error',
           message: error instanceof ApiError ? error.message : 'Could not load your courses.',
+          sessionExpired: error instanceof ApiError && error.status === 401,
         });
       });
 
@@ -260,6 +262,18 @@ export function AssignmentBuilderScreen(): JSX.Element {
                               >
                                 Try again
                               </button>
+                              {courseState.sessionExpired && (
+                                <>
+                                  {' · '}
+                                  <button
+                                    type="button"
+                                    className="font-medium underline"
+                                    onClick={notifySessionExpired}
+                                  >
+                                    Sign in again
+                                  </button>
+                                </>
+                              )}
                             </p>
                           )}
                         </FormItem>

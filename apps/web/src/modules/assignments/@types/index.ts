@@ -150,7 +150,7 @@ export interface CreateAssignmentPayload {
 
 export type CourseListState =
   | { status: 'loading' }
-  | { status: 'error'; message: string }
+  | { status: 'error'; message: string; sessionExpired: boolean }
   | { status: 'success'; courses: CourseOption[] };
 
 // Screen load state

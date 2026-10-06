@@ -1,5 +1,4 @@
 import { useEffect, useRef } from 'react';
-import { useNavigate } from 'react-router-dom';
 import { useAuth0, type User } from '@auth0/auth0-react';
 import { setAccessTokenGetter, setSessionExpiredHandler } from '@/utils/authToken';
 import { syncProfile } from '@/modules/onboarding/service';
@@ -26,10 +25,10 @@ function splitDisplayName(user: User): { firstName: string; lastName: string } {
  * directly), and just-in-time provisions the local profile row after login.
  */
 export function AuthTokenBridge(): null {
-  const { isAuthenticated, isLoading, user, getAccessTokenSilently } = useAuth0();
-  const navigate = useNavigate();
+  const { isAuthenticated, isLoading, user, getAccessTokenSilently, logout } = useAuth0();
   const { setProfile, setFailed } = useCurrentProfile();
   const hasSyncedRef = useRef(false);
+  const sessionEndedRef = useRef(false);
 
   useEffect(() => {
     setAccessTokenGetter(() => getAccessTokenSilently());
@@ -37,13 +36,18 @@ export function AuthTokenBridge(): null {
 
   useEffect(() => {
     setSessionExpiredHandler(() => {
-      // Guard against re-navigating when we're already there — a 401 can land
-      // from several in-flight requests at once.
-      if (window.location.pathname !== '/login') {
-        navigate('/login', { replace: true });
-      }
+      // Already on the sign-in screen, or already signing out because another request got
+      // its 401 first — several can land at once.
+      if (window.location.pathname === '/login' || sessionEndedRef.current) return;
+      sessionEndedRef.current = true;
+
+      // End the Auth0 session for real. Navigating to /login is not enough: the SDK still
+      // believes the user is signed in, so /login forwards them straight to the dashboard —
+      // every menu then appears to "go to the dashboard" and there is no way to sign in
+      // again. Signing out lands them on the sign-in screen with a clean session.
+      void logout({ logoutParams: { returnTo: window.location.origin } });
     });
-  }, [navigate]);
+  }, [logout]);
 
   useEffect(() => {
     if (!isAuthenticated || isLoading || hasSyncedRef.current || !user) return;
