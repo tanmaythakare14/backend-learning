@@ -18,6 +18,7 @@ import { AppShell } from '../components/layouts';
 import { Toaster } from '../components/ui/sonner';
 import { ProtectedRoute } from '../components/ProtectedRoute';
 import { AuthTokenBridge } from '../components/AuthTokenBridge';
+import { FeedbackWidget } from '../components/FeedbackWidget';
 import { FullScreenLoader } from '../components/FullScreenLoader';
 
 /**
@@ -64,6 +65,7 @@ function App() {
     <CurrentProfileProvider>
       <Toaster />
       <AuthTokenBridge />
+      <FeedbackWidget />
       <Routes>
         <Route path="/" element={<RootRedirect />} />
         <Route path="/login" element={<SignInScreen />} />

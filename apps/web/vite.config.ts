@@ -21,6 +21,12 @@ export default defineConfig({
       },
     },
   },
+  // Serve the feedback plugin as published instead of re-bundling it into the Vite cache: it loads
+  // its screenshot library lazily, and the cache's hashed chunk names go stale when the cache is
+  // rebuilt under a running dev server ("Failed to fetch dynamically imported module").
+  optimizeDeps: {
+    exclude: ['@mindbowser_inc/ui-feedback-plugin'],
+  },
   plugins: [react(), nxViteTsPaths()],
   build: {
     outDir: '../../dist/apps/web',

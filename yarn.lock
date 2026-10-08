@@ -2293,6 +2293,11 @@
   resolved "https://registry.npmjs.org/@microsoft/tsdoc/-/tsdoc-0.16.0.tgz"
   integrity sha512-xgAyonlVVS+q7Vc7qLW0UrJU7rSFcETRWsqdXZtjzRU8dF+6CkozTK4V4y1LwOX7j8r/vHphjDeMeGI4tNGeGA==
 
+"@mindbowser_inc/ui-feedback-plugin@^0.5.0":
+  version "0.5.0"
+  resolved "https://registry.yarnpkg.com/@mindbowser_inc/ui-feedback-plugin/-/ui-feedback-plugin-0.5.0.tgz#1d6eb842d361d43e7b996e53c01b4db289d4d221"
+  integrity sha512-7RRm0rZ446hQ4dwzYRtYB5RE8zcpiwWy5KHk/12JgTDwrlDB3Rk4tQjTT73rD1e9z8alkuI55BqEtdN1/QSlWg==
+
 "@modern-js/node-bundle-require@2.68.2":
   version "2.68.2"
   resolved "https://registry.npmjs.org/@modern-js/node-bundle-require/-/node-bundle-require-2.68.2.tgz"
